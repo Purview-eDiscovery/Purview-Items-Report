@@ -1,0 +1,2195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self' 'unsafe-inline' data: blob:; connect-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Purview eDiscovery Items Report (Local CSV Summary)</title>
+
+  <style>
+    :root{
+      --bg:#0b0f16;--panel:#121a26;--panel2:#0f1622;--text:#e7edf7;--muted:#a9b4c7;--border:#263246;
+      --accent:#7aa2ff;--danger:#ff7a90;--ok:#59d39c;--warn:#ffd37a;
+      --mono:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans)}
+
+    .container{max-width:1600px;margin:0 auto;padding:22px}
+
+    .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:14px}
+    .grid{display:grid;grid-template-columns:1fr;gap:14px;margin-top:14px}
+    @media (min-width: 980px){ .grid{grid-template-columns:1fr 1fr} }
+
+    .hero{
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:18px 16px;
+      background: radial-gradient(1200px 400px at 20% 0%, rgba(122,162,255,.18), transparent 55%),
+                  linear-gradient(180deg, var(--panel), var(--panel2));
+      margin-top:14px;
+    }
+    .heroTitle{
+      margin:0;
+      font-size:36px;
+      line-height:1.08;
+      letter-spacing:.2px;
+      font-weight:1000;
+    }
+    .heroMeta{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top:12px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+    }
+    .heroMeta strong{color:#cbd6ea}
+    .pill{display:inline-block;padding:2px 8px;border:1px solid var(--border);border-radius:999px;color:var(--muted);font-size:12px;background:#0b1220}
+    .heroSub{
+      margin:12px 0 0;
+      color:var(--muted);
+      line-height:1.48;
+      font-size:14px;
+      max-width:980px;
+    }
+
+    .dropzone{border:1px dashed var(--border);border-radius:12px;padding:18px;text-align:center;outline:none}
+    .dropzone.dragover{border-color:var(--accent)}
+    .dz-title{font-size:16px;font-weight:900}
+    .dz-sub{margin:8px 0;color:var(--muted)}
+    .dz-foot{margin-top:10px;color:var(--muted);font-size:13px;line-height:1.35}
+
+    .btn{
+      background:var(--accent);
+      color:#081025;
+      border:0;
+      padding:10px 12px;
+      border-radius:10px;
+      font-weight:950;
+      cursor:pointer;
+    }
+    .btn:disabled{opacity:.45;cursor:not-allowed}
+    .btn-secondary{background:transparent;color:var(--text);border:1px solid var(--border)}
+    .btn-main{
+      background: linear-gradient(180deg, #ffd37a, #ffb84a);
+      color:#221400;
+      border:0;
+      padding:14px 16px;
+      border-radius:14px;
+      font-weight:1000;
+      cursor:pointer;
+      box-shadow: 0 14px 40px rgba(255, 184, 74, .18);
+      min-width: 320px;
+      max-width: 100%;
+    }
+    .btn-main:hover{filter:brightness(1.02)}
+    .btn-main:disabled{opacity:.45; cursor:not-allowed; box-shadow:none}
+
+    .progress-wrap{margin-top:14px}
+    .progress-row{display:flex;align-items:center;gap:10px}
+    progress{width:100%;height:14px}
+    .actions{
+      display:flex;
+      gap:12px;
+      margin-top:12px;
+      flex-wrap:wrap;
+      justify-content:center;
+      align-items:center;
+      text-align:center;
+    }
+    .actions .hint{width:100%; color:var(--muted); font-size:13px; line-height:1.35; margin-top:4px}
+    .muted{color:var(--muted)}
+    .mono{font-family:var(--mono)}
+    .footer{margin-top:14px;font-size:13px;color:var(--muted);line-height:1.35}
+
+    .tableWrap{
+      overflow-x:auto;
+      overflow-y:hidden; /* prevents vertical scrollbar flicker from any layout changes */
+      -webkit-overflow-scrolling:touch;
+      border:1px solid var(--border);
+      border-radius:10px;
+      background:#0b1220;
+    }
+    .table{width:100%;border-collapse:collapse;margin-top:0;min-width:980px}
+    .table th,.table td{
+      border-bottom:1px solid var(--border);
+      padding:8px 10px;
+      text-align:left;
+      font-size:13px;
+      vertical-align:top;
+      overflow-wrap:anywhere;
+      word-break:break-word;
+      hyphens:auto;
+      white-space:normal;
+    }
+    .table th{color:#cbd6ea;font-weight:900;position:sticky;top:0;background:#0b1220;z-index:1}
+
+    .right{text-align:right}
+    .privacy-red{color:var(--danger);font-weight:1000;}
+    .kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+    @media (min-width: 980px){ .kpis{grid-template-columns:repeat(4,minmax(0,1fr));} }
+    .kpi{border:1px solid var(--border);border-radius:10px;padding:10px;background:#0f1622}
+    .kpi .k{font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center}
+    .kpi .v{font-size:16px;font-weight:1000;margin-top:4px}
+    .kpi .s{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.25}
+    details{border:1px solid var(--border);border-radius:10px;padding:10px;background:#0f1622}
+    details > summary{cursor:pointer;font-weight:950;color:#cbd6ea}
+    .small{font-size:12px}
+    .note{margin-top:8px;color:var(--muted);font-size:13px;line-height:1.35}
+    .hr{height:1px;background:var(--border);margin:10px 0}
+    .toggleRow{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:10px;color:var(--muted);font-size:13px}
+    label{cursor:pointer}
+    input[type="checkbox"]{transform: translateY(1px)}
+    .explain{margin:8px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+    .explain strong{color:#cbd6ea}
+    .callout{border:1px solid var(--border);border-radius:10px;background:#0f1622;padding:10px;margin-top:12px}
+    .callout-title{font-weight:950;color:#cbd6ea;margin:0 0 6px;font-size:13px}
+    .callout p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
+    .staticOnly{display:none;}
+    .staticReport .staticOnly{display:block;}
+    .staticReport .interactiveOnly{display:none;}
+
+    /* Help icons: tooltip is rendered in a fixed overlay so it never clips inside scroll containers. */
+    .helpTip{display:inline-flex;align-items:center;gap:6px;outline:none}
+    .helpIcon{
+      display:inline-flex;align-items:center;justify-content:center;
+      width:18px;height:18px;border-radius:999px;
+      border:1px solid var(--border);color:var(--muted);
+      font-size:12px;font-weight:1000;line-height:1;background:#0b1220;
+      cursor:help; user-select:none;
+      flex: 0 0 auto;
+    }
+
+    #helpTooltip{
+      position:fixed;
+      z-index:9999;
+      left:0; top:0;
+      display:none;
+      max-width:520px;
+      padding:10px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:#0b1220; color:var(--text);
+      box-shadow: 0 10px 34px rgba(0,0,0,.55);
+      font-size:12.5px; line-height:1.35;
+      pointer-events:none;
+    }
+    #helpTooltip.show{display:block}
+    #helpTooltip .t{font-weight:950;color:#cbd6ea;margin:0 0 4px}
+    #helpTooltip .b{color:var(--muted);margin:0}
+    #helpTooltip code{font-family:var(--mono);font-size:12px}
+
+    a{color:var(--accent);text-decoration:none}
+    a:hover{text-decoration:underline}
+    .siteLink{color:#cbd6ea;font-weight:950}
+  </style>
+</head>
+<body>
+
+  <main class="container" id="appRoot">
+    <header class="hero">
+      <h1 class="heroTitle">Purview eDiscovery Items Report</h1>
+
+      <div class="heroMeta">
+        <span class="pill" id="versionPill">Version —</span>
+        <span class="pill">Offline-friendly</span>
+        <span class="pill">No network</span>
+        <span class="pill">Author: Mitch King</span>
+        <span>
+          <a class="siteLink" href="https://purviewediscovery.com" target="_blank" rel="noopener noreferrer">purviewediscovery.com</a>
+        </span>
+      </div>
+
+      <p class="heroSub">
+        Summarizes the <strong class="mono">Items_…csv</strong> report produced by Purview processes.
+        The CSV is valid for reports downloaded <strong>after “Add to review set” completes</strong> and also <strong>after Download process completion</strong>.
+        The CSV is processed locally in your browser to produce <strong>aggregate-only</strong> metrics and a downloadable one-page HTML report.
+      </p>
+
+      <div class="callout">
+        <div class="callout-title">Where to get the CSV in Purview</div>
+        <p>
+          In Purview eDiscovery: open <strong>Process manager</strong> → select the process (<strong>Add to review set</strong> or <strong>Download</strong>) →
+          click <strong>Download report</strong> at the bottom. Filename example:
+          <span class="mono">Items_1-2025-10-21_09-14-31.csv</span>
+        </p>
+      </div>
+
+      <div class="staticOnly callout">
+        <div class="callout-title">Downloaded report (static)</div>
+        <p>This downloaded report already contains the calculated results. You do <strong>not</strong> need to upload the CSV again.</p>
+      </div>
+    </header>
+
+    <section class="card" style="margin-top:14px;">
+      <h2 style="margin:0 0 8px;font-size:16px;">Privacy &amp; transparency</h2>
+      <p style="margin:0 0 8px;color:var(--muted);line-height:1.45;">
+        Your CSV is <span class="privacy-red"><strong>not uploaded anywhere</strong></span>.
+        It is read from your device and <span class="privacy-red"><strong>processed entirely in your browser</strong></span> to produce aggregated metrics and an optional downloadable report.
+      </p>
+
+      <div class="callout interactiveOnly">
+        <div class="callout-title">Run locally (offline)</div>
+        <p>
+          This tool is a single HTML file. You can download it and run it locally (offline) by opening the HTML file in your browser.
+          No install, no server, and no network access (the page blocks network requests via CSP).
+        </p>
+        <div class="actions" style="margin-top:10px;">
+          <button id="downloadToolBtn" class="btn btn-secondary" type="button">Download this tool (HTML)</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="upload" class="card interactiveOnly">
+      <div id="dropzone" class="dropzone" tabindex="0" aria-label="Drop Purview Items_*.csv here">
+        <div class="dz-title">Drop your Purview process report CSV here (<span class="mono">Items_…csv</span>)</div>
+        <div class="dz-sub">or</div>
+
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+          <button id="openBtn" class="btn" type="button">Open CSV (local)…</button>
+          <button id="exampleBtn" class="btn btn-secondary" type="button">Load example dataset (demo)</button>
+        </div>
+
+        <input id="fileInput" type="file" accept=".csv,text/csv" hidden />
+
+        <div class="dz-foot">
+          Typical filename example: <span class="mono">Items_1-2025-10-21_09-14-31.csv</span>
+        </div>
+
+        <div class="toggleRow">
+          <label><input id="maskValues" type="checkbox" /> Mask custodian/location values in report output</label>
+        </div>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="progress-row">
+          <progress id="progress" value="0" max="100"></progress>
+          <span id="progressText" class="mono">0%</span>
+        </div>
+        <div id="statusText" class="muted" style="margin-top:6px;"></div>
+
+        <div class="actions">
+          <button id="downloadReportBtn" class="btn-main" type="button" disabled>Download one-page HTML report</button>
+          <button id="resetBtn" class="btn btn-secondary" type="button" disabled>Reset</button>
+          <div class="hint" id="downloadHint">
+            Generate the summary by opening a CSV, then click <strong>Download one-page HTML report</strong>.
+          </div>
+        </div>
+
+        <div id="fileMeta" class="note"></div>
+      </div>
+    </section>
+
+    <section id="summary" class="card">
+      <h2 style="margin:0 0 8px;font-size:16px;">Summary</h2>
+      <div id="kpis" class="kpis"></div>
+      <div id="summaryNotes" class="note muted"></div>
+    </section>
+
+    <section class="grid">
+      <section id="scope" class="card">
+        <h2 style="margin:0 0 8px;font-size:16px;">Scope (where the data came from)</h2>
+        <div class="explain">
+          <strong>What this means:</strong> which workloads/sources/custodians/locations contributed items to the process report.
+          <br />
+          <strong>Effective workload:</strong> Teams-related rows may be classified as <span class="mono">Teams</span> even if the CSV says <span class="mono">Exchange</span>.
+        </div>
+        <div id="scopeTables" class="muted">—</div>
+      </section>
+
+      <section id="exceptions" class="card">
+        <h2 style="margin:0 0 8px;font-size:16px;">Exceptions (what didn’t process cleanly)</h2>
+        <div class="explain">
+          <strong>What this means:</strong> items where <span class="mono">Status</span> is not <span class="mono">Successful</span>.
+          <br />
+          <strong>Date handling:</strong> non-success rows are excluded from all date range calculations (so placeholders like <span class="mono">1970-01-01</span> on retrieval errors do not distort the timeline).
+        </div>
+        <div id="exceptionTables" class="muted">—</div>
+      </section>
+    </section>
+
+    <section class="grid">
+      <section id="volume" class="card">
+        <h2 style="margin:0 0 8px;font-size:16px;">Volume drivers (what will take time/cost)</h2>
+        <div class="explain">
+          <strong>What this means:</strong> what is driving processing and review volume (large file sizes, many PDFs, lots of images/ZIPs, etc.).
+        </div>
+        <div id="volumeTables" class="muted">—</div>
+      </section>
+
+      <section id="text" class="card">
+        <h2 style="margin:0 0 8px;font-size:16px;">Text &amp; processing readiness</h2>
+        <div class="explain">
+          <strong>What this means:</strong> whether items have searchable text available and whether attachment/family links look healthy.
+        </div>
+        <div id="textTables" class="muted">—</div>
+      </section>
+    </section>
+
+    <section class="grid">
+      <section id="dates" class="card">
+        <h2 style="margin:0 0 8px;font-size:16px;">Dates coverage (did we capture the right time period?)</h2>
+        <div class="explain">
+          <strong>Important:</strong> date ranges are computed using <strong>Successful rows only</strong>. Placeholder/invalid timestamps (e.g. <span class="mono">1970-01-01</span>) are ignored.
+        </div>
+        <div id="dateTables" class="muted">—</div>
+      </section>
+
+      <section id="sensitivity" class="card">
+        <h2 style="margin:0 0 8px;font-size:16px;">Privilege &amp; sensitivity (triage)</h2>
+        <div class="explain">
+          Counts of fields provided in the report (not a legal determination). “Potentially privileged” may be blank if it wasn’t evaluated or wasn’t populated in the report.
+        </div>
+        <div id="sensTables" class="muted">—</div>
+      </section>
+    </section>
+
+    <section class="grid">
+      <section id="email" class="card">
+        <h2 style="margin:0 0 8px;font-size:16px;">Email indicators (aggregate)</h2>
+        <div class="explain">
+          External/encrypted/recipient-count signals (where fields exist).
+        </div>
+        <div id="emailTables" class="muted">—</div>
+      </section>
+
+      <section id="dedupe" class="card">
+        <h2 style="margin:0 0 8px;font-size:16px;">Dedupe / representatives / sets</h2>
+        <div class="explain">
+          “Set” fields are Purview-generated grouping identifiers (opaque IDs) used by analytics (near-duplicates, threading, family de-dupe).
+        </div>
+        <div id="dedupeTables" class="muted">—</div>
+      </section>
+    </section>
+
+    <section class="card">
+      <h2 style="margin:0 0 8px;font-size:16px;">Recommendations (what to do next)</h2>
+      <div class="explain">
+        Rule-of-thumb suggestions based on the aggregates above.
+      </div>
+      <ul id="recs" class="muted" style="margin:0;padding-left:18px;">
+        <li>Load an <span class="mono">Items_…csv</span> report to generate recommendations.</li>
+      </ul>
+    </section>
+
+    <section id="glossary" class="card">
+      <h2 style="margin:0 0 8px;font-size:16px;">Glossary (plain English)</h2>
+      <div class="explain">
+        Hover/focus the <span class="mono">?</span> icons throughout the report for explanations in context.
+      </div>
+      <div id="glossaryBody" class="muted">Load an <span class="mono">Items_…csv</span> report to populate the glossary.</div>
+    </section>
+
+    <footer class="footer">
+      <div><strong>Version:</strong> <span class="mono" id="versionFooter">—</span></div>
+      <div><strong>Author:</strong> Mitch King</div>
+      <div><strong>Privacy:</strong> this page performs no network requests (<span class="mono">connect-src 'none'</span>).</div>
+
+      <div class="hr"></div>
+
+      <div>
+        <strong>Disclaimer:</strong> This tool is provided <strong>“as is”</strong>, without warranty of any kind (express or implied).
+        It is for informational purposes only and does not constitute legal advice. You are responsible for validating results and complying with your organization’s policies.
+      </div>
+      <div class="small">Microsoft Purview, Microsoft 365, Exchange, SharePoint, Teams, and related names may be trademarks of Microsoft. This tool is not affiliated with or endorsed by Microsoft.</div>
+
+      <div class="hr"></div>
+
+      <div class="small">
+        Tool site: <a href="https://purviewediscovery.com" target="_blank" rel="noopener noreferrer">purviewediscovery.com</a>
+      </div>
+    </footer>
+  </main>
+
+  <!-- Fixed tooltip overlay -->
+  <div id="helpTooltip" role="tooltip" aria-hidden="true"></div>
+
+<script>
+(() => {
+  const TOOL_VERSION = "1.0.3";
+  const TOOL_NAME = "Purview eDiscovery Items Report";
+  const REPORT_TIMEZONE_LABEL = "UTC";
+
+  let maskOverrideForRender = null; // null = use checkbox; true/false = forced
+
+  const el = {
+    appRoot: document.getElementById("appRoot"),
+    versionPill: document.getElementById("versionPill"),
+    versionFooter: document.getElementById("versionFooter"),
+
+    dropzone: document.getElementById("dropzone"),
+    openBtn: document.getElementById("openBtn"),
+    exampleBtn: document.getElementById("exampleBtn"),
+    fileInput: document.getElementById("fileInput"),
+    progress: document.getElementById("progress"),
+    progressText: document.getElementById("progressText"),
+    statusText: document.getElementById("statusText"),
+    downloadReportBtn: document.getElementById("downloadReportBtn"),
+    resetBtn: document.getElementById("resetBtn"),
+    fileMeta: document.getElementById("fileMeta"),
+    maskValues: document.getElementById("maskValues"),
+    downloadToolBtn: document.getElementById("downloadToolBtn"),
+    downloadHint: document.getElementById("downloadHint"),
+
+    kpis: document.getElementById("kpis"),
+    summaryNotes: document.getElementById("summaryNotes"),
+    scopeTables: document.getElementById("scopeTables"),
+    exceptionTables: document.getElementById("exceptionTables"),
+    volumeTables: document.getElementById("volumeTables"),
+    textTables: document.getElementById("textTables"),
+    dateTables: document.getElementById("dateTables"),
+    sensTables: document.getElementById("sensTables"),
+    emailTables: document.getElementById("emailTables"),
+    dedupeTables: document.getElementById("dedupeTables"),
+    recs: document.getElementById("recs"),
+    glossaryBody: document.getElementById("glossaryBody"),
+
+    helpTooltip: document.getElementById("helpTooltip"),
+  };
+
+  function setVersionText() {
+    if (el.versionPill) el.versionPill.textContent = `Version ${TOOL_VERSION}`;
+    if (el.versionFooter) el.versionFooter.textContent = TOOL_VERSION;
+  }
+
+  function setProgress(p, text) {
+    if (!el.progress) return;
+    const v = Math.max(0, Math.min(100, p));
+    el.progress.value = v;
+    el.progressText.textContent = `${v.toFixed(0)}%`;
+    if (text !== undefined) el.statusText.textContent = text;
+  }
+
+  function esc(s) {
+    return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+  }
+
+  function fmtInt(n) {
+    const x = Number(n || 0);
+    return Number.isFinite(x) ? x.toLocaleString() : "0";
+  }
+
+  function fmtPct(n, d, digits = 2) {
+    if (!d) return "0.00%";
+    return ((n / d) * 100).toFixed(digits) + "%";
+  }
+
+  function formatBytes(bytes) {
+    if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+    const units = ["B","KB","MB","GB","TB"];
+    let i = 0, v = bytes;
+    while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+    return `${v.toFixed(i === 0 ? 0 : 2)} ${units[i]}`;
+  }
+
+  function quantile(values, q) {
+    if (!values.length) return undefined;
+    const sorted = values.slice().sort((a,b) => a-b);
+    const pos = (sorted.length - 1) * q;
+    const base = Math.floor(pos);
+    const rest = pos - base;
+    if (sorted[base + 1] === undefined) return sorted[base];
+    return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
+  }
+
+  function normStr(v) { return (v ?? "").trim(); }
+  function normLower(v) { return normStr(v).toLowerCase(); }
+
+  function parseBool(v) {
+    const s = normLower(v);
+    if (s === "true") return true;
+    if (s === "false") return false;
+    return undefined;
+  }
+
+  function toNum(v) {
+    if (v === undefined || v === null || v === "") return undefined;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : undefined;
+  }
+
+  function toInt(v) {
+    const n = toNum(v);
+    if (n === undefined) return undefined;
+    const i = Math.trunc(n);
+    return Number.isFinite(i) ? i : undefined;
+  }
+
+  function incCount(map, key, by = 1) { map[key] = (map[key] || 0) + by; }
+  function incBytes(map, key, by) { map[key] = (map[key] || 0) + by; }
+
+  function sortByValueDesc(map) {
+    return Object.entries(map)
+      .map(([key, value]) => ({ key, value }))
+      .sort((a,b) => b.value - a.value);
+  }
+
+  function takeFirst(arr, n) { return arr.slice(0, n); }
+
+  function normExt(v) {
+    const s = normLower(v);
+    if (!s) return "(none)";
+    if (s === "(none)") return "(none)";
+    return s.startsWith(".") ? s : ("." + s);
+  }
+
+  function isSuccessful(status) { return normLower(status) === "successful"; }
+  function isRetrievalError(status) { return normLower(status) === "retrieval error" || normLower(status) === "retrieval error "; }
+
+  function isoMonth(iso) {
+    const s = normStr(iso);
+    if (!s) return undefined;
+    if (s.length >= 7 && /^\d{4}-\d{2}/.test(s)) return s.slice(0, 7);
+    const d = new Date(s);
+    if (!Number.isFinite(d.getTime())) return undefined;
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+    return `${y}-${m}`;
+  }
+
+  function parseValidDateForRanges(raw) {
+    const s = normStr(raw);
+    if (!s) return undefined;
+    const d = new Date(s);
+    if (!Number.isFinite(d.getTime())) return undefined;
+    const y = d.getUTCFullYear();
+    if (y <= 1971) return undefined;
+    if (y >= 2100) return undefined;
+    return d;
+  }
+
+  function formatDateUtc(d) {
+    if (!d || !(d instanceof Date) || !Number.isFinite(d.getTime())) return "—";
+    const DD = String(d.getUTCDate()).padStart(2, "0");
+    const MMM = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"][d.getUTCMonth()];
+    const YYYY = String(d.getUTCFullYear());
+    const HH = String(d.getUTCHours()).padStart(2, "0");
+    const mm = String(d.getUTCMinutes()).padStart(2, "0");
+    const ss = String(d.getUTCSeconds()).padStart(2, "0");
+    return `${DD}-${MMM}-${YYYY} - ${HH}:${mm}:${ss} (UTC)`;
+  }
+
+  function shouldMaskValues() {
+    if (maskOverrideForRender !== null) return !!maskOverrideForRender;
+    if (!el.maskValues) return false;
+    return !!el.maskValues.checked;
+  }
+
+  function maskEmail(email) {
+    const s = normStr(email);
+    const at = s.indexOf("@");
+    if (at <= 0 || at === s.length - 1) return maskGeneric(s);
+    const local = s.slice(0, at);
+    const domain = s.slice(at + 1);
+    const keepLocal = Math.min(2, Math.max(1, local.length >= 2 ? 2 : 1));
+    const localMasked = local.slice(0, keepLocal) + "…";
+    return `${localMasked}@${domain}`;
+  }
+
+  function maskUrl(urlLike) {
+    const s = normStr(urlLike);
+    if (!s) return s;
+    try {
+      const u = new URL(s);
+      const host = u.host || u.hostname || "(host)";
+      const path = u.pathname || "";
+      const parts = path.split("/").filter(Boolean);
+      const last = parts.length ? parts[parts.length - 1] : "";
+      if (last) return `${host}/…/${last}`;
+      return `${host}/…`;
+    } catch {
+      return maskGeneric(s);
+    }
+  }
+
+  function maskGeneric(s) {
+    const v = normStr(s);
+    if (!v || v === "(blank)" || v === "(none)") return v || "(blank)";
+    if (v.length <= 10) return v[0] + "…" + v.slice(-1);
+    return v.slice(0, 6) + "…" + v.slice(-6);
+  }
+
+  function maskLocationId(id) {
+    const s = normStr(id);
+    if (!s || s === "(blank)" || s === "(none)") return s || "(blank)";
+    const parts = s.split(":");
+    if (parts.length >= 2) {
+      const prefix = parts[0];
+      const rest = parts.slice(1).join(":");
+      if (rest.includes("@")) return `${prefix}:${maskEmail(rest)}`;
+      if (rest.startsWith("http://") || rest.startsWith("https://")) return `${prefix}:${maskUrl(rest)}`;
+      if (/^\d+$/.test(rest)) return `${prefix}:…${rest.slice(-4)}`;
+      return `${prefix}:${maskGeneric(rest)}`;
+    }
+    if (s.includes("@")) return maskEmail(s);
+    if (s.startsWith("http://") || s.startsWith("https://")) return maskUrl(s);
+    return maskGeneric(s);
+  }
+
+  function maskDataSource(ds) {
+    const s = normStr(ds);
+    if (!s || s === "(blank)" || s === "(none)") return s || "(blank)";
+
+    const colon = s.indexOf(":");
+    if (colon > 0 && colon < 18) {
+      const label = s.slice(0, colon);
+      const rest = s.slice(colon + 1).trim();
+
+      if (rest.includes("@")) return `${label}: ${maskEmail(rest)}`;
+      if (rest.startsWith("http://") || rest.startsWith("https://")) return `${label}: ${maskUrl(rest)}`;
+      return `${label}: ${maskGeneric(rest)}`;
+    }
+
+    if (s.includes("@")) return maskEmail(s);
+    if (s.startsWith("http://") || s.startsWith("https://")) return maskUrl(s);
+    return maskGeneric(s);
+  }
+
+  function displayCustodian(custodian) {
+    const k = normStr(custodian);
+    if (!k) return "(blank)";
+    if (!shouldMaskValues()) return k;
+    if (k.includes("@")) return maskEmail(k);
+    return maskGeneric(k);
+  }
+
+  function displayLocationId(locationId) {
+    const k = normStr(locationId);
+    if (!k) return "(blank)";
+    if (!shouldMaskValues()) return k;
+    return maskLocationId(k);
+  }
+
+  function displayDataSource(ds) {
+    const k = normStr(ds);
+    if (!k) return "(blank)";
+    if (!shouldMaskValues()) return k;
+    return maskDataSource(k);
+  }
+
+  function helpTipHtml(title, body) {
+    return `
+      <span class="helpTip" tabindex="0" aria-label="${esc(title)}"
+            data-help-title="${esc(title)}" data-help-body="${esc(body)}">
+        <span class="helpIcon" aria-hidden="true">?</span>
+      </span>
+    `;
+  }
+
+  function initHelpTooltipSystem() {
+    const tip = el.helpTooltip;
+    if (!tip) return;
+
+    let activeAnchor = null;
+    let raf = 0;
+
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+    function positionNow(anchor) {
+      if (!anchor) return;
+
+      const vw = document.documentElement.clientWidth || window.innerWidth;
+      const vh = document.documentElement.clientHeight || window.innerHeight;
+
+      // Measure after content is applied and tip is visible.
+      const a = anchor.getBoundingClientRect();
+      const t = tip.getBoundingClientRect();
+
+      // Prefer opening downward, but flip upward if it would go off-screen.
+      const margin = 8;
+      const gap = 8;
+
+      let top = a.bottom + gap;
+      if (top + t.height > vh - margin) {
+        top = a.top - gap - t.height;
+      }
+      top = clamp(top, margin, Math.max(margin, vh - margin - t.height));
+
+      let left = (a.left + a.width / 2) - (t.width / 2);
+      left = clamp(left, margin, Math.max(margin, vw - margin - t.width));
+
+      tip.style.left = `${left}px`;
+      tip.style.top = `${top}px`;
+    }
+
+    function schedulePosition(anchor) {
+      activeAnchor = anchor;
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => positionNow(activeAnchor));
+    }
+
+    function showFor(anchor) {
+      if (!anchor) return;
+      const title = anchor.dataset.helpTitle || "";
+      const body = anchor.dataset.helpBody || "";
+      if (!title && !body) return;
+
+      tip.innerHTML = `
+        <div class="t">${esc(title)}</div>
+        <div class="b">${esc(body)}</div>
+      `;
+      tip.classList.add("show");
+      tip.setAttribute("aria-hidden", "false");
+      schedulePosition(anchor);
+    }
+
+    function hide() {
+      activeAnchor = null;
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+      tip.classList.remove("show");
+      tip.setAttribute("aria-hidden", "true");
+    }
+
+    // Pointer
+    document.addEventListener("mouseover", (e) => {
+      const a = e.target && e.target.closest ? e.target.closest(".helpTip") : null;
+      if (a) showFor(a);
+    }, true);
+
+    document.addEventListener("mouseout", (e) => {
+      const from = e.target && e.target.closest ? e.target.closest(".helpTip") : null;
+      const to = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest(".helpTip") : null;
+      if (from && from !== to) hide();
+    }, true);
+
+    // Keyboard focus
+    document.addEventListener("focusin", (e) => {
+      const a = e.target && e.target.closest ? e.target.closest(".helpTip") : null;
+      if (a) showFor(a);
+    }, true);
+
+    document.addEventListener("focusout", (e) => {
+      const from = e.target && e.target.closest ? e.target.closest(".helpTip") : null;
+      const to = e.relatedTarget && e.relatedTarget.closest ? e.relatedTarget.closest(".helpTip") : null;
+      if (from && from !== to) hide();
+    }, true);
+
+    // Reposition on scroll/resize while visible.
+    window.addEventListener("scroll", () => {
+      if (tip.classList.contains("show") && activeAnchor) schedulePosition(activeAnchor);
+    }, true);
+
+    window.addEventListener("resize", () => {
+      if (tip.classList.contains("show") && activeAnchor) schedulePosition(activeAnchor);
+    }, true);
+
+    // Escape to hide.
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") hide();
+    }, true);
+  }
+
+  function isGuidLike(s) {
+    const v = normStr(s);
+    return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(v);
+  }
+
+  function normalizeLocationSubType(raw) {
+    const s = normStr(raw);
+    if (!s) return "(blank)";
+    return s;
+  }
+
+  function locationTypeFromLocationIdAndSubType(rawId, rawSubType) {
+    const id = normStr(rawId);
+    const u = id.toUpperCase();
+
+    if (u.startsWith("EXO:") || u.includes("EXO:")) return "Exchange mailbox (EXO)";
+    if (u.startsWith("SPO:") || u.includes("SPO:")) return "SharePoint site/library (SPO)";
+    if (u.startsWith("OD:") || u.includes("OD:")) return "OneDrive (OD)";
+
+    const sub = normLower(rawSubType);
+    if (sub === "primarymailbox") return "Exchange mailbox (EXO)";
+    if (sub === "site") return "SharePoint site/library (SPO)";
+    if (sub === "onedrivesite") return "OneDrive (OD)";
+    if (sub === "secondarymailbox") return "Exchange mailbox (secondary)";
+    if (sub === "archive") return "Exchange archive mailbox";
+
+    if (!id || id === "(blank)") return "Unknown location type";
+    if (id.includes("@")) return "Exchange mailbox (likely)";
+    if (id.startsWith("http://") || id.startsWith("https://")) return "SharePoint/OneDrive (URL)";
+    if (isGuidLike(id)) return "Unknown location type (GUID; missing Location sub type)";
+    return "Unknown location type";
+  }
+
+  const GLOSSARY = {
+    "Items.csv purpose": "Items_…csv is an authoritative per-item audit/export report. Each row represents a single item (email, site file, Teams message, etc.) with metadata about where it came from, what it is, and how it processed.",
+    "Effective workload (Teams vs Exchange)": "Teams compliance data is commonly stored in Exchange mailboxes, so exports can show Workload=Exchange for Teams chats. This report derives an Effective workload=Teams when strong Teams indicators exist (e.g., Content source application=MicrosoftTeams, Item class contains SkypeTeams, or paths contain /TEAMS/ or TeamsMessagesData).",
+    "Potentially privileged": "This is a Purview-provided triage field that may indicate an item has privilege-related signals (not a legal determination). IMPORTANT: If your exports show this column as blank, it typically means the value was not populated in that report, rather than “no privilege”.",
+    "Family ID": "Family ID groups items that belong together (e.g., an email and its attachments).",
+    "Location ID": "Location ID identifies the target location for the item (mailbox/site/drive). Exports vary: some use prefixes like EXO/SPO/OD, others output GUID-like IDs. If the ID is GUID-like, this report derives the location type using the Location sub type column (PrimaryMailBox/Site/OneDriveSite) when present.",
+    "Location sub type": "Location sub type is a Purview-exported classifier for the location. Common values: PrimaryMailBox (Exchange), Site (SharePoint), OneDriveSite (OneDrive).",
+    "Data source": "Data source identifies the source container that produced the item (mailbox, site, OneDrive, etc.). For SharePoint/OneDrive it often looks like a site URL; for Exchange it may look like Mailbox:user@domain.",
+    "Has text": "Has text indicates whether searchable/extracted text exists for the item as reported in the CSV.",
+    "Has text = FALSE": "Has text=FALSE means Purview did not report extracted/searchable text for the item. Common causes: images/ZIPs, encrypted/protected files, unsupported formats, or extraction not completed for that item.",
+    "Extracted text length": "Extracted text length is the number of characters in extracted/searchable text (when present). A value may be missing even if Has text is TRUE in some exports (or vice versa), depending on report columns and processing stage.",
+    "Attachment-like rows (heuristic)": "This report counts a row as “attachment-like” if any attachment signals are present (Is modern attachment / Is attachment from transcript / Parent ID / Modern attachment parent ID / Type contains “attach”). This is a heuristic and may over/under count depending on how the export was produced.",
+    "Parent ID / Modern attachment parent ID": "These fields link an attachment back to its parent item. Missing links can affect family reconstruction.",
+    "Percentile (95%)": "“95% of sized items are ≤ X” means only ~5% of sized items are larger than X.",
+    "Date range rules (important)": "Date ranges and month counts use Successful rows only. Non-success rows are excluded, and epoch-like placeholder years (1970/1971) are ignored.",
+    "Displayed time zone": "Dates are displayed in UTC because Purview exports commonly use ISO timestamps ending with Z (UTC).",
+    "Is external": "Is external is a Purview flag that can indicate the item is associated with external access/external context. IMPORTANT: it is not strictly “external sender/recipient”. For SharePoint/OneDrive items it commonly relates to external sharing (shared with external users/guest users or sharing links). For Exchange/Teams it may relate to external participants/tenants depending on workload/report. Treat as a triage hint; verify with the workload-specific sharing/participant fields if available in your export.",
+    "Is encrypted": "Is encrypted indicates content was encrypted/protected as reported at export time (for example encrypted email or protected file). Encrypted items frequently have Has text=FALSE or small extracted text length because extraction can be blocked.",
+    "Recipient count": "Recipient count is the number of recipients for an email item (when present). Large counts can indicate distribution lists or broad communications.",
+  };
+
+  const ERROR_BUCKET_RULES = [
+    { name: "Item download failed", patterns: ["download", "fail"] },
+    { name: "Throttling / rate limiting", patterns: ["throttl"] },
+    { name: "Timeout", patterns: ["timeout"] },
+    { name: "Access denied / unauthorized", patterns: ["access denied"] },
+    { name: "Not found (404)", patterns: ["not found"] },
+    { name: "SharePoint path/link issue", patterns: ["sharepoint"] },
+  ];
+
+  function bucketErrorDetail(detail) {
+    const d = normStr(detail);
+    if (!d) return "(none)";
+    const s = d.toLowerCase();
+    for (const rule of ERROR_BUCKET_RULES) {
+      const ok = rule.patterns.every(p => s.includes(p));
+      if (ok) return rule.name;
+    }
+    return d.length > 140 ? d.slice(0, 140) + "…" : d;
+  }
+
+  function isTeamsLikeRow(get) {
+    const csa = normLower(get("Content source application"));
+    const itemClass = normLower(get("Item class"));
+    const compoundPath = normLower(get("Compound path"));
+    const itemSource = normLower(get("Item source"));
+    const fileClass = normLower(get("File class"));
+    const type = normLower(get("Type"));
+
+    if (csa.includes("microsoftteams")) return true;
+    if (itemClass.includes("skypeteams")) return true;
+    if (compoundPath.includes("/teamsmessagesdata") || compoundPath.includes("/skypespacesdata")) return true;
+    if (compoundPath.includes("/teams/")) return true;
+    if (itemSource.includes("/teams/") || itemSource.includes("microsoftteams")) return true;
+    if (fileClass.includes("microsoftteams")) return true;
+    if (type === "conversation" && (compoundPath.includes("teams") || itemClass.includes("skypeteams"))) return true;
+    return false;
+  }
+
+  function deriveEffectiveWorkload(get) {
+    const raw = normStr(get("Workload")) || "(blank)";
+    if (isTeamsLikeRow(get)) return "Teams";
+    return raw;
+  }
+
+  function createEmptyAgg() {
+    return {
+      rows: 0,
+      csvSha256Hex: "",
+      sourceFileName: "",
+      fileSizeBytes: 0,
+      generatedAt: undefined,
+
+      statusCounts: {},
+      successes: 0,
+      failures: 0,
+      retrievalErrors: 0,
+
+      countByWorkload: {},
+      bytesByWorkload: {},
+      countByDataSource: {},
+      bytesByDataSource: {},
+      countByCustodian: {},
+      bytesByCustodian: {},
+      countByLocationId: {},
+      bytesByLocationId: {},
+
+      locationSubTypeByLocationId: {},
+      countByLocationSubType: {},
+
+      failuresByWorkload: {},
+      failuresByCustodian: {},
+      failuresByDataSource: {},
+      failuresByLocationId: {},
+      failuresByType: {},
+      errorBuckets: {},
+
+      totalBytes: 0,
+      sizedRows: 0,
+      missingSizeRows: 0,
+      sizes: [],
+      extCounts: {},
+      extBytes: {},
+      extractedContentTypeCounts: {},
+
+      hasTextTrue: 0,
+      hasTextFalse: 0,
+      extractedTextLen: [],
+      extractedTextLenMissing: 0,
+
+      attachmentRows: 0,
+      missingParentIdOnAttachmentRows: 0,
+      missingModernAttachmentParentIdOnAttachmentRows: 0,
+      familyIdSet: new Set(),
+      familySizes: [],
+
+      createdMin: undefined,
+      createdMax: undefined,
+      receivedMin: undefined,
+      receivedMax: undefined,
+      sentMin: undefined,
+      sentMax: undefined,
+      dateMin: undefined,
+      dateMax: undefined,
+
+      createdByMonth: {},
+      receivedByMonth: {},
+      sentByMonth: {},
+      dateByMonth: {},
+
+      dateRowsSuccessful: 0,
+      dateRowsNonSuccessExcluded: 0,
+      dateFieldsEpochOrInvalidExcluded: 0,
+      missingCreated: 0,
+      missingReceived: 0,
+      missingSent: 0,
+      missingDateField: 0,
+
+      potentiallyPrivilegedTrue: 0,
+      sensitivityLabelCounts: {},
+      sensitiveTypeCounts: {},
+
+      isExternalTrue: 0,
+      isEncryptedTrue: 0,
+      recipientCounts: [],
+
+      isRepresentativeTrue: 0,
+      isThreadRepresentativeTrue: 0,
+      isGroupRepresentativeTrue: 0,
+      ndSetCounts: {},
+      emailSetCounts: {},
+      familyDuplicateSetCounts: {},
+
+      missingWorkload: 0,
+      missingCustodian: 0,
+      missingDataSource: 0,
+      missingLocationId: 0,
+      missingLocationSubType: 0,
+
+      teamsLikeRows: 0,
+      teamsLikeButExchangeWorkloadRows: 0,
+    };
+  }
+
+  function ingestRow(agg, get) {
+    agg.rows++;
+
+    const status = normStr(get("Status")) || "(blank)";
+    incCount(agg.statusCounts, status);
+    const ok = isSuccessful(status);
+
+    if (ok) agg.successes++;
+    else agg.failures++;
+    if (isRetrievalError(status)) agg.retrievalErrors++;
+
+    const rawWorkload = normStr(get("Workload")) || "(blank)";
+    const effectiveWorkload = deriveEffectiveWorkload(get);
+
+    const custodian = normStr(get("Custodian")) || "(blank)";
+    const dataSource = normStr(get("Data source")) || "(blank)";
+    const locationId = normStr(get("Location ID")) || "(blank)";
+    const locationSubType = normalizeLocationSubType(get("Location sub type"));
+    const type = normStr(get("Type")) || normStr(get("Item class")) || "(blank)";
+
+    if (rawWorkload === "(blank)") agg.missingWorkload++;
+    if (custodian === "(blank)") agg.missingCustodian++;
+    if (dataSource === "(blank)") agg.missingDataSource++;
+    if (locationId === "(blank)") agg.missingLocationId++;
+    if (locationSubType === "(blank)") agg.missingLocationSubType++;
+
+    if (locationId !== "(blank)" && locationSubType !== "(blank)") {
+      if (!agg.locationSubTypeByLocationId[locationId]) {
+        agg.locationSubTypeByLocationId[locationId] = locationSubType;
+      }
+      incCount(agg.countByLocationSubType, locationSubType);
+    }
+
+    const teamsLike = isTeamsLikeRow(get);
+    if (teamsLike) {
+      agg.teamsLikeRows++;
+      if (normLower(rawWorkload) === "exchange") agg.teamsLikeButExchangeWorkloadRows++;
+    }
+
+    incCount(agg.countByWorkload, effectiveWorkload);
+    incCount(agg.countByCustodian, custodian);
+    incCount(agg.countByDataSource, dataSource);
+    incCount(agg.countByLocationId, locationId);
+
+    const size = toNum(get("Size"));
+    const ext = normExt(get("File extension") || get("Original file extension"));
+    if (size !== undefined) {
+      agg.sizedRows++;
+      agg.totalBytes += size;
+      agg.sizes.push(size);
+
+      incBytes(agg.bytesByWorkload, effectiveWorkload, size);
+      incBytes(agg.bytesByCustodian, custodian, size);
+      incBytes(agg.bytesByDataSource, dataSource, size);
+      incBytes(agg.bytesByLocationId, locationId, size);
+
+      incCount(agg.extCounts, ext);
+      incBytes(agg.extBytes, ext, size);
+    } else {
+      agg.missingSizeRows++;
+      incCount(agg.extCounts, ext);
+    }
+
+    const ect = normStr(get("Extracted content type")) || "(blank)";
+    incCount(agg.extractedContentTypeCounts, ect);
+
+    const hasText = parseBool(get("Has text"));
+    if (hasText === true) agg.hasTextTrue++;
+    else if (hasText === false) agg.hasTextFalse++;
+
+    const etl = toInt(get("Extracted text length"));
+    if (etl !== undefined) agg.extractedTextLen.push(etl);
+    else agg.extractedTextLenMissing++;
+
+    const isModernAttachment = parseBool(get("Is modern attachment")) === true;
+    const isAttachmentFromTranscript = parseBool(get("Is attachment from transcript")) === true;
+
+    const parentId = normStr(get("Parent ID"));
+    const modernParentId = normStr(get("Modern attachment parent ID"));
+    const typeLooksLikeAttachment = normLower(get("Type")).includes("attach");
+    const isAttachmentRow = isModernAttachment || isAttachmentFromTranscript || typeLooksLikeAttachment || parentId.length > 0 || modernParentId.length > 0;
+
+    if (isAttachmentRow) {
+      agg.attachmentRows++;
+      if (!parentId) agg.missingParentIdOnAttachmentRows++;
+      if (isModernAttachment && !modernParentId) agg.missingModernAttachmentParentIdOnAttachmentRows++;
+    }
+
+    const familyId = normStr(get("Family ID"));
+    if (familyId) agg.familyIdSet.add(familyId);
+
+    const famSize = toInt(get("Family size"));
+    if (famSize !== undefined) agg.familySizes.push(famSize);
+
+    if (ok) {
+      agg.dateRowsSuccessful++;
+
+      const createdRaw = get("Created");
+      const receivedRaw = get("Received");
+      const sentRaw = get("Email date sent");
+      const dateRaw = get("Date");
+
+      const created = parseValidDateForRanges(createdRaw);
+      const received = parseValidDateForRanges(receivedRaw);
+      const sent = parseValidDateForRanges(sentRaw);
+      const date = parseValidDateForRanges(dateRaw);
+
+      if (!normStr(createdRaw)) agg.missingCreated++;
+      else if (!created) agg.dateFieldsEpochOrInvalidExcluded++;
+
+      if (!normStr(receivedRaw)) agg.missingReceived++;
+      else if (!received) agg.dateFieldsEpochOrInvalidExcluded++;
+
+      if (!normStr(sentRaw)) agg.missingSent++;
+      else if (!sent) agg.dateFieldsEpochOrInvalidExcluded++;
+
+      if (!normStr(dateRaw)) agg.missingDateField++;
+      else if (!date) agg.dateFieldsEpochOrInvalidExcluded++;
+
+      if (created) {
+        agg.createdMin = (!agg.createdMin || created < agg.createdMin) ? created : agg.createdMin;
+        agg.createdMax = (!agg.createdMax || created > agg.createdMax) ? created : agg.createdMax;
+        const m = isoMonth(created.toISOString());
+        if (m) incCount(agg.createdByMonth, m);
+      }
+
+      if (received) {
+        agg.receivedMin = (!agg.receivedMin || received < agg.receivedMin) ? received : agg.receivedMin;
+        agg.receivedMax = (!agg.receivedMax || received > agg.receivedMax) ? received : agg.receivedMax;
+        const m = isoMonth(received.toISOString());
+        if (m) incCount(agg.receivedByMonth, m);
+      }
+
+      if (sent) {
+        agg.sentMin = (!agg.sentMin || sent < agg.sentMin) ? sent : agg.sentMin;
+        agg.sentMax = (!agg.sentMax || sent > agg.sentMax) ? sent : agg.sentMax;
+        const m = isoMonth(sent.toISOString());
+        if (m) incCount(agg.sentByMonth, m);
+      }
+
+      if (date) {
+        agg.dateMin = (!agg.dateMin || date < agg.dateMin) ? date : agg.dateMin;
+        agg.dateMax = (!agg.dateMax || date > agg.dateMax) ? date : agg.dateMax;
+        const m = isoMonth(date.toISOString());
+        if (m) incCount(agg.dateByMonth, m);
+      }
+    } else {
+      agg.dateRowsNonSuccessExcluded++;
+    }
+
+    const priv = parseBool(get("Potentially privileged"));
+    if (priv === true) agg.potentiallyPrivilegedTrue++;
+
+    const sensLabel = normStr(get("Sensitivity label")) || "(blank)";
+    incCount(agg.sensitivityLabelCounts, sensLabel);
+
+    const sensitiveType = normStr(get("Sensitive type")) || "(blank)";
+    incCount(agg.sensitiveTypeCounts, sensitiveType);
+
+    const isExternal = parseBool(get("Is external"));
+    if (isExternal === true) agg.isExternalTrue++;
+
+    const isEncrypted = parseBool(get("Is encrypted"));
+    if (isEncrypted === true) agg.isEncryptedTrue++;
+
+    const rc = toInt(get("Recipient count"));
+    if (rc !== undefined) agg.recipientCounts.push(rc);
+
+    if (parseBool(get("Is representative")) === true) agg.isRepresentativeTrue++;
+    if (parseBool(get("Is thread representative")) === true) agg.isThreadRepresentativeTrue++;
+    if (parseBool(get("Is group representative")) === true) agg.isGroupRepresentativeTrue++;
+
+    const ndSet = normStr(get("ND set")) || "(blank)";
+    incCount(agg.ndSetCounts, ndSet);
+
+    const emailSet = normStr(get("Email set")) || "(blank)";
+    incCount(agg.emailSetCounts, emailSet);
+
+    const famDupSet = normStr(get("Family duplicate set")) || "(blank)";
+    incCount(agg.familyDuplicateSetCounts, famDupSet);
+
+    if (!ok) {
+      incCount(agg.failuresByWorkload, effectiveWorkload);
+      incCount(agg.failuresByCustodian, custodian);
+      incCount(agg.failuresByDataSource, dataSource);
+      incCount(agg.failuresByLocationId, locationId);
+      incCount(agg.failuresByType, type);
+      incCount(agg.errorBuckets, bucketErrorDetail(get("Error detail")));
+    }
+  }
+
+  function parseCsvText(text, onRow, onProgress) {
+    let i = 0;
+    const n = text.length;
+    let cell = "";
+    let row = [];
+    let inQuotes = false;
+
+    const pushCell = () => { row.push(cell); cell = ""; };
+    const pushRow = () => { onRow(row); row = []; };
+
+    const tickEvery = 250000;
+    let nextTick = tickEvery;
+
+    while (i < n) {
+      const ch = text[i];
+
+      if (onProgress && i >= nextTick) {
+        nextTick += tickEvery;
+        onProgress(i, n);
+      }
+
+      if (inQuotes) {
+        if (ch === '"') {
+          if (i + 1 < n && text[i + 1] === '"') { cell += '"'; i += 2; continue; }
+          inQuotes = false; i++; continue;
+        } else {
+          cell += ch; i++; continue;
+        }
+      } else {
+        if (ch === '"') { inQuotes = true; i++; continue; }
+        if (ch === ",") { pushCell(); i++; continue; }
+        if (ch === "\r") {
+          pushCell(); pushRow();
+          if (i + 1 < n && text[i + 1] === "\n") i += 2;
+          else i++;
+          continue;
+        }
+        if (ch === "\n") { pushCell(); pushRow(); i++; continue; }
+        cell += ch; i++; continue;
+      }
+    }
+
+    pushCell();
+    const nonEmpty = row.some(v => v !== "");
+    if (nonEmpty) pushRow();
+
+    if (onProgress) onProgress(n, n);
+  }
+
+  async function sha256HexFromArrayBuffer(buf) {
+    const digest = await crypto.subtle.digest("SHA-256", buf);
+    const bytes = new Uint8Array(digest);
+    let hex = "";
+    for (const b of bytes) hex += b.toString(16).padStart(2, "0");
+    return hex;
+  }
+
+  async function sha256HexFromTextUtf8(text) {
+    const bytes = new TextEncoder().encode(text);
+    return sha256HexFromArrayBuffer(bytes.buffer);
+  }
+
+  function asTable(title, rows, cols) {
+    const body = rows.length
+      ? rows.map(r => `<tr>${cols.map(c => `<td class="${c.right ? "right mono" : ""}">${c.cell(r)}</td>`).join("")}</tr>`).join("")
+      : `<tr><td colspan="${cols.length}" class="muted">—</td></tr>`;
+
+    const head = `<tr>${cols.map(c => `<th class="${c.right ? "right" : ""}">${c.header}</th>`).join("")}</tr>`;
+
+    return `
+      <div style="margin-top:10px;">
+        <div class="muted small" style="margin:0 0 6px;">${esc(title)}</div>
+        <div class="tableWrap" role="region" aria-label="${esc(title)} (scroll horizontally if needed)">
+          <table class="table">
+            <thead>${head}</thead>
+            <tbody>${body}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  function buildKpis(agg) {
+    const p50 = quantile(agg.sizes, 0.50);
+    const p95 = quantile(agg.sizes, 0.95);
+
+    const hasTextPct = agg.rows ? (agg.hasTextTrue / agg.rows) * 100 : 0;
+    const privPct = agg.rows ? (agg.potentiallyPrivilegedTrue / agg.rows) * 100 : 0;
+    const failPct = agg.rows ? (agg.failures / agg.rows) * 100 : 0;
+
+    const explainSized = `Calculated from rows where Size is numeric (${fmtInt(agg.sizedRows)} rows).`;
+
+    const k = [
+      {
+        k:`Items (rows) ${helpTipHtml("Items (rows)", "Number of CSV rows. Each row represents one item record from the Purview process report.")}`,
+        v: fmtInt(agg.rows),
+        s:"Used as the denominator for most percentages."
+      },
+      {
+        k:`Successful ${helpTipHtml("Successful", "Count of rows where Status equals “Successful”. Only Successful rows contribute to date ranges.")}`,
+        v: fmtInt(agg.successes),
+        s:`${fmtPct(agg.successes, agg.rows)}`
+      },
+      {
+        k:`Non-success items ${helpTipHtml("Non-success items", "Count of rows where Status is not Successful (Failed / Retrieval error / Partially successful etc.).")}`,
+        v: fmtInt(agg.failures),
+        s:`${failPct.toFixed(2)}%`
+      },
+      {
+        k:`Total size ${helpTipHtml("Total size", "Sum of numeric Size values only. Missing/non-numeric sizes are treated as unknown (not zero).")}`,
+        v: formatBytes(agg.totalBytes),
+        s: explainSized
+      },
+      {
+        k:`Typical item size (median) ${helpTipHtml("Median size", "The 50th percentile of numeric Size values: half the sized items are smaller, half are larger.")}`,
+        v: p50 ? formatBytes(p50) : "—",
+        s: explainSized
+      },
+      {
+        k:`Outliers (95th percentile) ${helpTipHtml("Percentile (95%)", GLOSSARY["Percentile (95%)"])}`,
+        v: p95 ? formatBytes(p95) : "—",
+        s: explainSized
+      },
+      {
+        k:`Has text ${helpTipHtml("Has text", GLOSSARY["Has text"])}`,
+        v: `${hasTextPct.toFixed(1)}%`,
+        s:`Has text=TRUE (${fmtInt(agg.hasTextTrue)} items).`
+      },
+      {
+        k:`Potentially privileged ${helpTipHtml("Potentially privileged", GLOSSARY["Potentially privileged"])}`,
+        v: `${privPct.toFixed(1)}%`,
+        s:`TRUE on ${fmtInt(agg.potentiallyPrivilegedTrue)} items (blank often means “not populated”).`
+      },
+      {
+        k:`Created date range (Successful only) ${helpTipHtml("Date range rules (important)", GLOSSARY["Date range rules (important)"])}`,
+        v: "—",
+        s:`${formatDateUtc(agg.createdMin)} → ${formatDateUtc(agg.createdMax)}`
+      },
+      {
+        k:`Teams-like rows (derived) ${helpTipHtml("Effective workload (Teams vs Exchange)", GLOSSARY["Effective workload (Teams vs Exchange)"])}`,
+        v: fmtInt(agg.teamsLikeRows),
+        s:`Of which ${fmtInt(agg.teamsLikeButExchangeWorkloadRows)} had Workload=Exchange in CSV.`
+      },
+      {
+        k:`Families (unique) ${helpTipHtml("Family ID", GLOSSARY["Family ID"])}`,
+        v: fmtInt(agg.familyIdSet.size),
+        s:"Distinct Family ID values."
+      },
+      {
+        k:`Location IDs (unique) ${helpTipHtml("Location ID", GLOSSARY["Location ID"])}`,
+        v: fmtInt(Object.keys(agg.countByLocationId).length),
+        s:"Distinct Location ID values."
+      },
+    ];
+
+    el.kpis.innerHTML = k.map(x => `
+      <div class="kpi">
+        <div class="k">${x.k}</div>
+        <div class="v">${esc(x.v)}</div>
+        <div class="s">${esc(x.s)}</div>
+      </div>
+    `).join("");
+  }
+
+  function buildRecommendations(agg) {
+    const recs = [];
+    const failPct = agg.rows ? (agg.failures / agg.rows) * 100 : 0;
+    const mostCommonErr = sortByValueDesc(agg.errorBuckets)[0]?.key;
+    const mostImpactedWorkload = sortByValueDesc(agg.failuresByWorkload)[0];
+
+    if (agg.failures > 0) {
+      recs.push(`There are ${fmtInt(agg.failures)} non-success items (${failPct.toFixed(2)}%). Start with the most common error bucket: “${mostCommonErr || "Unknown"}”.`);
+      if (agg.retrievalErrors > 0) recs.push(`Retrieval error appears ${fmtInt(agg.retrievalErrors)} times. Treat the process output as potentially incomplete until re-run outcomes are confirmed.`);
+      if (mostImpactedWorkload && (mostImpactedWorkload.value / Math.max(1, agg.failures)) >= 0.6) {
+        recs.push(`Most failures are in “${mostImpactedWorkload.key}” (${fmtPct(mostImpactedWorkload.value, agg.failures, 0)} of failures). Consider a targeted re-run for that source (split by location and/or date range).`);
+      }
+    } else {
+      recs.push("All rows are Successful (no exceptions found).");
+    }
+
+    const hasTextPct = agg.rows ? (agg.hasTextTrue / agg.rows) * 100 : 0;
+    if (hasTextPct < 60) recs.push(`Only ${hasTextPct.toFixed(1)}% of items show Has text=TRUE. Expect more native review, imaging, or OCR depending on workflow.`);
+
+    if (agg.potentiallyPrivilegedTrue > 0) recs.push(`Potentially privileged is TRUE on ${fmtInt(agg.potentiallyPrivilegedTrue)} items. Confirm privilege review workflow early.`);
+    else recs.push(`Potentially privileged is never TRUE in this report. If the column is blank, it may not have been populated for this report/workload/process.`);
+
+    if (agg.dateRowsNonSuccessExcluded > 0) recs.push(`Dates: ${fmtInt(agg.dateRowsNonSuccessExcluded)} non-success rows were excluded from date ranges (prevents placeholder timestamps from distorting timelines).`);
+
+    if (agg.attachmentRows > 0 && agg.missingParentIdOnAttachmentRows > 0) {
+      recs.push(`Attachment linkage: ${fmtInt(agg.missingParentIdOnAttachmentRows)} attachment-like rows are missing Parent ID. This can affect family reconstruction in downstream tools.`);
+    }
+
+    if (agg.missingLocationSubType > 0) {
+      recs.push(`Location type derivation: ${fmtInt(agg.missingLocationSubType)} rows have blank Location sub type. If Location ID values are GUID-like, missing sub type can prevent workload-accurate location classification.`);
+    }
+
+    return recs;
+  }
+
+  function buildGlossaryHtml() {
+    const entries = Object.entries(GLOSSARY).sort((a,b) => a[0].localeCompare(b[0]));
+    return `
+      ${asTable("Terms used in this report", entries.map(([term, def]) => ({ term, def })), [
+        { header:"Term", cell:r => `${esc(r.term)}` },
+        { header:"Meaning (plain English)", cell:r => `${esc(r.def)}` }
+      ])}
+    `;
+  }
+
+  function renderAll(agg) {
+    buildKpis(agg);
+
+    const missing = [
+      { field: `Missing/blank Size`, count: agg.missingSizeRows, meaning: "No numeric Size, so bytes/percentiles exclude these rows." },
+      { field: `Missing/blank Workload`, count: agg.missingWorkload, meaning: "Workload blank; row groups under (blank) unless Teams-derived." },
+      { field: `Missing/blank Custodian`, count: agg.missingCustodian, meaning: "Custodian blank; row groups under (blank)." },
+      { field: `Missing/blank Data source ${helpTipHtml("Data source", GLOSSARY["Data source"])}`, count: agg.missingDataSource, meaning: "Data source blank; row groups under (blank)." },
+      { field: `Missing/blank Location ID ${helpTipHtml("Location ID", GLOSSARY["Location ID"])}`, count: agg.missingLocationId, meaning: "Location ID blank; row groups under (blank)." },
+      { field: `Missing/blank Location sub type ${helpTipHtml("Location sub type", GLOSSARY["Location sub type"])}`, count: agg.missingLocationSubType, meaning: "If Location ID is GUID-like (no EXO/SPO/OD prefix), sub type is needed to classify it as mailbox vs site vs OneDrive." },
+      { field: `Missing Created (Successful rows only)`, count: agg.missingCreated, meaning: "Only counted for Successful rows; non-success rows are excluded from date coverage." },
+      { field: `Missing Received (Successful rows only)`, count: agg.missingReceived, meaning: "Only counted for Successful rows; non-success rows are excluded from date coverage." },
+      { field: `Missing Email date sent (Successful rows only)`, count: agg.missingSent, meaning: "Only counted for Successful rows; non-success rows are excluded from date coverage." },
+      { field: `Missing Date (Successful rows only)`, count: agg.missingDateField, meaning: "Only counted for Successful rows; this column may not exist in all reports." },
+    ];
+
+    el.summaryNotes.innerHTML = `
+      <div class="muted">
+        <div><strong>Chosen file:</strong> <span class="mono">${esc(agg.sourceFileName)}</span> (${esc(formatBytes(agg.fileSizeBytes))})</div>
+        <div><strong>Generated:</strong> <span class="mono">${esc(formatDateUtc(agg.generatedAt))}</span> ${helpTipHtml("Displayed time zone", GLOSSARY["Displayed time zone"])}</div>
+        <div><strong>CSV SHA-256:</strong> <span class="mono">${esc(agg.csvSha256Hex || "—")}</span></div>
+        <div class="note">${helpTipHtml("Items.csv purpose", GLOSSARY["Items.csv purpose"])}</div>
+      </div>
+      ${asTable("Missing/blank field counts", missing.filter(x => x.count > 0), [
+        { header:"Field", cell:r => r.field },
+        { header:"Count", right:true, cell:r => esc(fmtInt(r.count)) },
+        { header:"% of rows", right:true, cell:r => esc(fmtPct(r.count, agg.rows, 2)) },
+        { header:"What it means", cell:r => esc(r.meaning) },
+      ])}
+    `;
+
+    const byWorkload = takeFirst(sortByValueDesc(agg.countByWorkload), 10).map(x => ({ key:x.key, count:x.value, bytes: agg.bytesByWorkload[x.key] || 0 }));
+    const byCustodian = takeFirst(sortByValueDesc(agg.countByCustodian), 8).map(x => ({ key:x.key, count:x.value, bytes: agg.bytesByCustodian[x.key] || 0 }));
+    const byDataSource = takeFirst(sortByValueDesc(agg.countByDataSource), 8).map(x => ({ key:x.key, count:x.value, bytes: agg.bytesByDataSource[x.key] || 0 }));
+    const byLocation = takeFirst(sortByValueDesc(agg.countByLocationId), 8).map(x => {
+      const subType = agg.locationSubTypeByLocationId[x.key] || "(blank)";
+      return {
+        key:x.key,
+        count:x.value,
+        bytes: agg.bytesByLocationId[x.key] || 0,
+        subType,
+        type: locationTypeFromLocationIdAndSubType(x.key, subType),
+      };
+    });
+
+    el.scopeTables.innerHTML = `
+      ${asTable("Largest contributors by Effective workload (counts and total size)", byWorkload, [
+        { header:`Effective workload ${helpTipHtml("Effective workload (Teams vs Exchange)", GLOSSARY["Effective workload (Teams vs Exchange)"])}`, cell:r => esc(r.key) },
+        { header:"Items (rows)", right:true, cell:r => esc(fmtInt(r.count)) },
+        { header:"Total size (sum of Size)", right:true, cell:r => esc(formatBytes(r.bytes)) },
+        { header:"% of rows", right:true, cell:r => esc(fmtPct(r.count, agg.rows, 2)) },
+      ])}
+      <details style="margin-top:10px;">
+        <summary>More scope breakdowns (Custodian / Data source / Location)</summary>
+        ${asTable("Custodians with the most items", byCustodian, [
+          { header:"Custodian", cell:r => esc(displayCustodian(r.key)) },
+          { header:"Items", right:true, cell:r => esc(fmtInt(r.count)) },
+          { header:"Total size", right:true, cell:r => esc(formatBytes(r.bytes)) },
+        ])}
+        ${asTable("Data sources with the most items", byDataSource, [
+          { header:`Data source ${helpTipHtml("Data source", GLOSSARY["Data source"])}`, cell:r => esc(displayDataSource(r.key)) },
+          { header:"Items", right:true, cell:r => esc(fmtInt(r.count)) },
+          { header:"Total size", right:true, cell:r => esc(formatBytes(r.bytes)) },
+        ])}
+        ${asTable("Locations with the most items (normalized)", byLocation, [
+          { header:`Location type ${helpTipHtml("Location ID", GLOSSARY["Location ID"])}`, cell:r => esc(r.type) },
+          { header:`Location sub type ${helpTipHtml("Location sub type", GLOSSARY["Location sub type"])}`, cell:r => esc(r.subType) },
+          { header:"Location ID", cell:r => esc(displayLocationId(r.key)) },
+          { header:"Items", right:true, cell:r => esc(fmtInt(r.count)) },
+          { header:"Total size", right:true, cell:r => esc(formatBytes(r.bytes)) },
+        ])}
+        <div class="note">Masking affects display only; calculations use full values.</div>
+      </details>
+    `;
+
+    const statusList = takeFirst(sortByValueDesc(agg.statusCounts), 12).map(x => ({ status:x.key, count:x.value }));
+    const errorBuckets = takeFirst(sortByValueDesc(agg.errorBuckets), 12).map(x => ({ bucket:x.key, count:x.value }));
+    const failuresByWorkload = takeFirst(sortByValueDesc(agg.failuresByWorkload), 8).map(x => ({ key:x.key, count:x.value }));
+    const failuresByLocation = takeFirst(sortByValueDesc(agg.failuresByLocationId), 8).map(x => {
+      const subType = agg.locationSubTypeByLocationId[x.key] || "(blank)";
+      return {
+        key:x.key,
+        count:x.value,
+        subType,
+        type: locationTypeFromLocationIdAndSubType(x.key, subType),
+      };
+    });
+    const failuresByDataSource = takeFirst(sortByValueDesc(agg.failuresByDataSource), 8).map(x => ({ key:x.key, count:x.value }));
+    const failuresByType = takeFirst(sortByValueDesc(agg.failuresByType), 8).map(x => ({ key:x.key, count:x.value }));
+
+    el.exceptionTables.innerHTML = `
+      ${asTable("Statuses found in the CSV", statusList, [
+        { header:"Status", cell:r => esc(r.status) },
+        { header:"Count", right:true, cell:r => esc(fmtInt(r.count)) },
+        { header:"% of rows", right:true, cell:r => esc(fmtPct(r.count, agg.rows, 2)) },
+      ])}
+      ${asTable("Most common exception buckets (from Error detail on non-success rows)", errorBuckets, [
+        { header:"Grouped error bucket", cell:r => esc(r.bucket) },
+        { header:"Count", right:true, cell:r => esc(fmtInt(r.count)) },
+        { header:"% of non-success rows", right:true, cell:r => esc(fmtPct(r.count, Math.max(1, agg.failures), 2)) },
+      ])}
+      <details style="margin-top:10px;">
+        <summary>Where exceptions happen (Effective workload / Location / Data source / Type)</summary>
+        ${asTable("Non-success items by Effective workload", failuresByWorkload, [
+          { header:"Effective workload", cell:r => esc(r.key) },
+          { header:"Non-success items", right:true, cell:r => esc(fmtInt(r.count)) },
+          { header:"% of non-success", right:true, cell:r => esc(fmtPct(r.count, Math.max(1, agg.failures), 2)) },
+        ])}
+        ${asTable("Non-success items by location (normalized)", failuresByLocation, [
+          { header:`Location type ${helpTipHtml("Location ID", GLOSSARY["Location ID"])}`, cell:r => esc(r.type) },
+          { header:`Location sub type ${helpTipHtml("Location sub type", GLOSSARY["Location sub type"])}`, cell:r => esc(r.subType) },
+          { header:"Location ID", cell:r => esc(displayLocationId(r.key)) },
+          { header:"Non-success items", right:true, cell:r => esc(fmtInt(r.count)) },
+        ])}
+        ${asTable("Non-success items by Data source", failuresByDataSource, [
+          { header:`Data source ${helpTipHtml("Data source", GLOSSARY["Data source"])}`, cell:r => esc(displayDataSource(r.key)) },
+          { header:"Non-success items", right:true, cell:r => esc(fmtInt(r.count)) },
+        ])}
+        ${asTable("Non-success items by Type", failuresByType, [
+          { header:"Type", cell:r => esc(r.key) },
+          { header:"Non-success items", right:true, cell:r => esc(fmtInt(r.count)) },
+        ])}
+      </details>
+    `;
+
+    const extByBytes = takeFirst(sortByValueDesc(agg.extBytes), 10).map(x => ({ ext:x.key, bytes:x.value, count: agg.extCounts[x.key] || 0 }));
+    const extByCount = takeFirst(sortByValueDesc(agg.extCounts), 10).map(x => ({ ext:x.key, count:x.value, bytes: agg.extBytes[x.key] || 0 }));
+    const ect = takeFirst(sortByValueDesc(agg.extractedContentTypeCounts), 10).map(x => ({ ct:x.key, count:x.value }));
+
+    const bands = { "<100KB":0, "100KB–1MB":0, "1–10MB":0, "10–100MB":0, ">100MB":0, "Unknown (no Size)":0 };
+    for (const s of agg.sizes) {
+      if (s < 100*1024) bands["<100KB"]++;
+      else if (s < 1024*1024) bands["100KB–1MB"]++;
+      else if (s < 10*1024*1024) bands["1–10MB"]++;
+      else if (s < 100*1024*1024) bands["10–100MB"]++;
+      else bands[">100MB"]++;
+    }
+    bands["Unknown (no Size)"] = agg.missingSizeRows;
+
+    el.volumeTables.innerHTML = `
+      ${asTable("Item size bands (based on Size)", Object.entries(bands).map(([band,count]) => ({ band, count })), [
+        { header:"Size band", cell:r => esc(r.band) },
+        { header:"Count", right:true, cell:r => esc(fmtInt(r.count)) },
+        { header:"% of rows", right:true, cell:r => esc(fmtPct(r.count, agg.rows, 2)) },
+      ])}
+      ${asTable("File extensions contributing the most total size", extByBytes, [
+        { header:"Extension", cell:r => esc(r.ext) },
+        { header:"Total size", right:true, cell:r => esc(formatBytes(r.bytes)) },
+        { header:"Items", right:true, cell:r => esc(fmtInt(r.count)) },
+      ])}
+      <details style="margin-top:10px;">
+        <summary>More volume breakdowns</summary>
+        ${asTable("Most common file extensions (by count)", extByCount, [
+          { header:"Extension", cell:r => esc(r.ext) },
+          { header:"Items", right:true, cell:r => esc(fmtInt(r.count)) },
+          { header:"Total size", right:true, cell:r => esc(formatBytes(r.bytes)) },
+        ])}
+        ${asTable("Most common extracted content types", ect, [
+          { header:"Extracted content type", cell:r => esc(r.ct) },
+          { header:"Items", right:true, cell:r => esc(fmtInt(r.count)) },
+          { header:"% of rows", right:true, cell:r => esc(fmtPct(r.count, agg.rows, 2)) },
+        ])}
+      </details>
+    `;
+
+    const etP50 = quantile(agg.extractedTextLen, 0.50);
+    const etP95 = quantile(agg.extractedTextLen, 0.95);
+
+    el.textTables.innerHTML = `
+      ${asTable("Text availability and attachments", [
+        { metric:`Has text = TRUE ${helpTipHtml("Has text", GLOSSARY["Has text"])}`, value: `${fmtInt(agg.hasTextTrue)} (${fmtPct(agg.hasTextTrue, agg.rows, 2)})` },
+        { metric:`Has text = FALSE ${helpTipHtml("Has text = FALSE", GLOSSARY["Has text = FALSE"])}`, value: `${fmtInt(agg.hasTextFalse)} (${fmtPct(agg.hasTextFalse, agg.rows, 2)})` },
+        { metric:`Extracted text length present ${helpTipHtml("Extracted text length", GLOSSARY["Extracted text length"])}`, value: `${fmtInt(agg.extractedTextLen.length)} (${fmtPct(agg.extractedTextLen.length, agg.rows, 2)})` },
+        { metric:`Typical extracted text length (median) ${helpTipHtml("Extracted text length", GLOSSARY["Extracted text length"])}`, value: etP50 !== undefined ? fmtInt(etP50) : "—" },
+        { metric:`Outliers extracted text length (95th percentile) ${helpTipHtml("Percentile (95%)", GLOSSARY["Percentile (95%)"])}`, value: etP95 !== undefined ? fmtInt(etP95) : "—" },
+        { metric:`Attachment-like rows (heuristic) ${helpTipHtml("Attachment-like rows (heuristic)", GLOSSARY["Attachment-like rows (heuristic)"])}`, value: `${fmtInt(agg.attachmentRows)}` },
+        { metric:`Attachment-like rows missing Parent ID ${helpTipHtml("Parent ID / Modern attachment parent ID", GLOSSARY["Parent ID / Modern attachment parent ID"])}`, value: `${fmtInt(agg.missingParentIdOnAttachmentRows)} (${fmtPct(agg.missingParentIdOnAttachmentRows, Math.max(1, agg.attachmentRows), 2)})` },
+        { metric:`Attachment rows missing Modern attachment parent ID ${helpTipHtml("Parent ID / Modern attachment parent ID", GLOSSARY["Parent ID / Modern attachment parent ID"])}`, value: `${fmtInt(agg.missingModernAttachmentParentIdOnAttachmentRows)} (${fmtPct(agg.missingModernAttachmentParentIdOnAttachmentRows, Math.max(1, agg.attachmentRows), 2)})` },
+      ], [
+        { header:"Metric", cell:r => r.metric },
+        { header:"Result", right:true, cell:r => esc(r.value) },
+      ])}
+    `;
+
+    function fmtRange(minD, maxD) {
+      if (!minD && !maxD) return "—";
+      return `${formatDateUtc(minD)} → ${formatDateUtc(maxD)}`;
+    }
+
+    el.dateTables.innerHTML = `
+      ${asTable("Date ranges (Successful rows only; placeholders excluded)", [
+        { metric:`Created range ${helpTipHtml("Date range rules (important)", GLOSSARY["Date range rules (important)"])}`, value: fmtRange(agg.createdMin, agg.createdMax) },
+        { metric:"Received range", value: fmtRange(agg.receivedMin, agg.receivedMax) },
+        { metric:"Email date sent range", value: fmtRange(agg.sentMin, agg.sentMax) },
+        { metric:"Date column range (if present)", value: fmtRange(agg.dateMin, agg.dateMax) },
+      ], [
+        { header:"Metric", cell:r => r.metric },
+        { header:"Result", cell:r => esc(r.value) },
+      ])}
+      ${asTable("Date inclusion/exclusion summary", [
+        { metric:`Successful rows considered for dates ${helpTipHtml("Date range rules (important)", GLOSSARY["Date range rules (important)"])}`, value: fmtInt(agg.dateRowsSuccessful) },
+        { metric:"Non-success rows excluded from all date stats", value: fmtInt(agg.dateRowsNonSuccessExcluded) },
+        { metric:"Present-but-invalid/epoch-like date values excluded (Successful rows)", value: fmtInt(agg.dateFieldsEpochOrInvalidExcluded) },
+      ], [
+        { header:"Metric", cell:r => r.metric },
+        { header:"Value", right:true, cell:r => esc(r.value) },
+      ])}
+      <details style="margin-top:10px;">
+        <summary>Counts by month (Created/Received/Sent/Date)</summary>
+        ${asTable("Created by month", takeFirst(sortByValueDesc(agg.createdByMonth), 12).map(x => ({ m:x.key, c:x.value })), [
+          { header:"Month (YYYY-MM)", cell:r => esc(r.m) },
+          { header:"Items", right:true, cell:r => esc(fmtInt(r.c)) },
+        ])}
+        ${asTable("Received by month", takeFirst(sortByValueDesc(agg.receivedByMonth), 12).map(x => ({ m:x.key, c:x.value })), [
+          { header:"Month (YYYY-MM)", cell:r => esc(r.m) },
+          { header:"Items", right:true, cell:r => esc(fmtInt(r.c)) },
+        ])}
+        ${asTable("Email date sent by month", takeFirst(sortByValueDesc(agg.sentByMonth), 12).map(x => ({ m:x.key, c:x.value })), [
+          { header:"Month (YYYY-MM)", cell:r => esc(r.m) },
+          { header:"Items", right:true, cell:r => esc(fmtInt(r.c)) },
+        ])}
+        ${asTable("Date column by month", takeFirst(sortByValueDesc(agg.dateByMonth), 12).map(x => ({ m:x.key, c:x.value })), [
+          { header:"Month (YYYY-MM)", cell:r => esc(r.m) },
+          { header:"Items", right:true, cell:r => esc(fmtInt(r.c)) },
+        ])}
+      </details>
+    `;
+
+    el.sensTables.innerHTML = `
+      ${asTable("Privilege flag", [
+        { metric:`Potentially privileged = TRUE ${helpTipHtml("Potentially privileged", GLOSSARY["Potentially privileged"])}`, value: `${fmtInt(agg.potentiallyPrivilegedTrue)} (${fmtPct(agg.potentiallyPrivilegedTrue, agg.rows, 2)})` }
+      ], [
+        { header:"Metric", cell:r => r.metric },
+        { header:"Result", cell:r => esc(r.value) },
+      ])}
+      ${asTable("Sensitivity labels (most common values)", takeFirst(sortByValueDesc(agg.sensitivityLabelCounts), 10).map(x => ({ k:x.key, c:x.value })), [
+        { header:"Sensitivity label", cell:r => esc(r.k) },
+        { header:"Count", right:true, cell:r => esc(fmtInt(r.c)) },
+        { header:"% of rows", right:true, cell:r => esc(fmtPct(r.c, agg.rows, 2)) },
+      ])}
+      <details style="margin-top:10px;">
+        <summary>Sensitive type (most common values)</summary>
+        ${asTable("Sensitive type", takeFirst(sortByValueDesc(agg.sensitiveTypeCounts), 10).map(x => ({ k:x.key, c:x.value })), [
+          { header:"Sensitive type", cell:r => esc(r.k) },
+          { header:"Count", right:true, cell:r => esc(fmtInt(r.c)) },
+          { header:"% of rows", right:true, cell:r => esc(fmtPct(r.c, agg.rows, 2)) },
+        ])}
+      </details>
+    `;
+
+    const rcP50 = quantile(agg.recipientCounts, 0.50);
+    const rcP95 = quantile(agg.recipientCounts, 0.95);
+
+    el.emailTables.innerHTML = `
+      ${asTable("Email complexity / external context signals", [
+        {
+          metric:`Is external = TRUE ${helpTipHtml("Is external", GLOSSARY["Is external"])}`,
+          value: `${fmtInt(agg.isExternalTrue)} (${fmtPct(agg.isExternalTrue, agg.rows, 2)})`
+        },
+        {
+          metric:`Is encrypted = TRUE ${helpTipHtml("Is encrypted", GLOSSARY["Is encrypted"])}`,
+          value: `${fmtInt(agg.isEncryptedTrue)} (${fmtPct(agg.isEncryptedTrue, agg.rows, 2)})`
+        },
+        {
+          metric:`Typical recipient count (median) ${helpTipHtml("Recipient count", GLOSSARY["Recipient count"])}`,
+          value: rcP50 !== undefined ? fmtInt(rcP50) : "—"
+        },
+        {
+          metric:`Outliers recipient count (95th percentile) ${helpTipHtml("Percentile (95%)", GLOSSARY["Percentile (95%)"])}`,
+          value: rcP95 !== undefined ? fmtInt(rcP95) : "—"
+        },
+      ], [
+        { header:"Metric", cell:r => r.metric },
+        { header:"Result", right:true, cell:r => esc(r.value) },
+      ])}
+    `;
+
+    el.dedupeTables.innerHTML = `
+      ${asTable("Representative flags (TRUE rates)", [
+        { metric:`Is representative = TRUE ${helpTipHtml("Is representative", "TRUE means the item was flagged as a representative in a Purview analysis set (when populated).")}`, value: `${fmtInt(agg.isRepresentativeTrue)} (${fmtPct(agg.isRepresentativeTrue, agg.rows, 2)})` },
+        { metric:`Is thread representative = TRUE ${helpTipHtml("Is thread representative", "TRUE means the item was selected as a representative for an email thread/conversation grouping (when populated).")}`, value: `${fmtInt(agg.isThreadRepresentativeTrue)} (${fmtPct(agg.isThreadRepresentativeTrue, agg.rows, 2)})` },
+        { metric:`Is group representative = TRUE ${helpTipHtml("Is group representative", "TRUE means the item was selected as a representative for a group/cluster in analytics (when populated).")}`, value: `${fmtInt(agg.isGroupRepresentativeTrue)} (${fmtPct(agg.isGroupRepresentativeTrue, agg.rows, 2)})` },
+      ], [
+        { header:"Metric", cell:r => r.metric },
+        { header:"Result", right:true, cell:r => esc(r.value) },
+      ])}
+    `;
+
+    const recs = buildRecommendations(agg);
+    el.recs.innerHTML = recs.map(r => `<li>${esc(r)}</li>`).join("") || `<li>No recommendations.</li>`;
+
+    if (el.glossaryBody) el.glossaryBody.innerHTML = buildGlossaryHtml();
+
+    if (el.downloadReportBtn) el.downloadReportBtn.disabled = false;
+    if (el.resetBtn) el.resetBtn.disabled = false;
+
+    if (el.downloadHint) {
+      el.downloadHint.innerHTML = `Ready. Click <strong>Download one-page HTML report</strong> to save a shareable snapshot (includes tool version <span class="mono">${esc(TOOL_VERSION)}</span>).`;
+    }
+  }
+
+  function buildStaticReportHtml(agg) {
+    const generatedAt = new Date();
+
+    const prevOverride = maskOverrideForRender;
+    maskOverrideForRender = null;
+
+    renderAll(agg);
+
+    const docClone = document.documentElement.cloneNode(true);
+    docClone.querySelector("body")?.classList.add("staticReport");
+    docClone.querySelectorAll("script").forEach(s => s.remove());
+    docClone.querySelectorAll("progress, #statusText").forEach(n => n?.remove());
+
+    // Remove the live tooltip overlay from the static report.
+    docClone.querySelector("#helpTooltip")?.remove();
+
+    const vp = docClone.querySelector("#versionPill");
+    if (vp) vp.textContent = `Version ${TOOL_VERSION}`;
+    const vf = docClone.querySelector("#versionFooter");
+    if (vf) vf.textContent = TOOL_VERSION;
+
+    const summaryNotes = docClone.querySelector("#summaryNotes");
+    if (summaryNotes) {
+      summaryNotes.insertAdjacentHTML("afterbegin", `
+        <div class="callout">
+          <div class="callout-title">Downloaded report details</div>
+          <p><strong>Tool:</strong> ${esc(TOOL_NAME)} <span class="pill">Version ${esc(TOOL_VERSION)}</span></p>
+          <p><strong>Author:</strong> Mitch King</p>
+          <p><strong>Report generated:</strong> <span class="mono">${esc(formatDateUtc(generatedAt))}</span></p>
+          <p><strong>Analyzed CSV:</strong> <span class="mono">${esc(agg.sourceFileName)}</span> (${esc(formatBytes(agg.fileSizeBytes))})</p>
+          <p><strong>CSV SHA-256:</strong> <span class="mono">${esc(agg.csvSha256Hex)}</span></p>
+          <p class="muted">Note: this downloaded HTML is static and includes the computed results shown on screen. Custodian/location values are masked only if the option was enabled at download time.</p>
+        </div>
+      `);
+    }
+
+    maskOverrideForRender = prevOverride;
+    return "<!doctype html>\n" + docClone.outerHTML;
+  }
+
+  function resetUi() {
+    setProgress(0, "");
+    if (el.fileMeta) el.fileMeta.textContent = "";
+    if (el.kpis) el.kpis.innerHTML = "";
+    if (el.summaryNotes) el.summaryNotes.textContent = "";
+
+    if (el.scopeTables) el.scopeTables.textContent = "—";
+    if (el.exceptionTables) el.exceptionTables.textContent = "—";
+    if (el.volumeTables) el.volumeTables.textContent = "—";
+    if (el.textTables) el.textTables.textContent = "—";
+    if (el.dateTables) el.dateTables.textContent = "—";
+    if (el.sensTables) el.sensTables.textContent = "—";
+    if (el.emailTables) el.emailTables.textContent = "—";
+    if (el.dedupeTables) el.dedupeTables.textContent = "—";
+    if (el.recs) el.recs.innerHTML = `<li>Load an <span class="mono">Items_…csv</span> report to generate recommendations.</li>`;
+    if (el.glossaryBody) el.glossaryBody.textContent = "Load an Items_…csv report to populate the glossary.";
+
+    if (el.downloadReportBtn) el.downloadReportBtn.disabled = true;
+    if (el.resetBtn) el.resetBtn.disabled = true;
+
+    if (el.downloadHint) {
+      el.downloadHint.innerHTML = `Generate the summary by opening a CSV, then click <strong>Download one-page HTML report</strong>.`;
+    }
+  }
+
+  function downloadTextFile(filename, content, mime = "text/plain") {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function analyzeCsvText(csvText, agg) {
+    const wantedCols = new Set([
+      "Status","Error detail","Workload","Type","Item class",
+      "Size","File extension","Original file extension","Extracted content type",
+      "Has attachment","Has unique attachment","Has text","Extracted text length",
+      "Family ID","Family size","Parent ID","Modern attachment parent ID",
+      "Is modern attachment","Is attachment from transcript",
+      "Created","Received","Email date sent","Date",
+      "Custodian","Data source","Location ID","Location sub type",
+      "Potentially privileged","Sensitivity label","Sensitive type",
+      "Is external","Is encrypted","Recipient count",
+      "Is representative","Is thread representative","Is group representative",
+      "ND set","Email set","Family duplicate set",
+      "Content source application","Compound path","Item source","File class",
+      "Added by",
+    ]);
+
+    let header = null;
+    const colIndex = new Map();
+    let processedRows = 0;
+
+    setProgress(20, "Parsing CSV…");
+
+    parseCsvText(csvText, (cells) => {
+      if (!header) {
+        header = cells.map((h, idx) => {
+          if (idx === 0 && h && h.charCodeAt(0) === 0xFEFF) return h.slice(1);
+          return h;
+        });
+
+        header.forEach((name, idx) => {
+          const key = normStr(name);
+          if (wantedCols.has(key)) colIndex.set(key, idx);
+        });
+
+        return;
+      }
+
+      if (cells.length === 1 && normStr(cells[0]) === "") return;
+
+      const get = (name) => {
+        const idx = colIndex.get(name);
+        if (idx === undefined) return undefined;
+        return cells[idx];
+      };
+
+      ingestRow(agg, get);
+      processedRows++;
+
+    }, (pos, total) => {
+      const pct = 20 + (pos / total) * 75;
+      setProgress(pct, `Parsing… ${processedRows.toLocaleString()} rows processed`);
+    });
+
+    setProgress(98, `Parsed ${agg.rows.toLocaleString()} rows. Rendering…`);
+  }
+
+  function buildExampleCsv() {
+    function mulberry32(seed) {
+      let a = seed >>> 0;
+      return function() {
+        a |= 0;
+        a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+    const rnd = mulberry32(0xC0FFEE);
+
+    const custodians = [
+      "alice.johnson@company.com",
+      "bob.smith@company.com",
+      "carol.nguyen@company.com",
+      "daniel.lee@company.com",
+      "erica.martin@company.com",
+      "fatima.khan@company.com",
+    ];
+
+    const workloads = ["Exchange", "SharePoint", "OneDrive", "Exchange"];
+    const types = ["Email", "Conversation", "Attachment", "Message", "Document"];
+
+    const sensLabels = ["(blank)", "General", "Confidential", "Highly Confidential", "Restricted"];
+    const sensitiveTypes = ["(blank)", "Credit Card Number", "SSN", "Bank Account", "Passport Number", "Health Data"];
+    const extPool = [".pdf",".docx",".xlsx",".pptx",".txt",".csv",".zip",".png",".jpg",".msg",".eml",".mp4",".html"];
+
+    function pick(arr) { return arr[Math.floor(rnd() * arr.length)]; }
+    function chance(p) { return rnd() < p; }
+    function int(min, max) { return Math.floor(rnd() * (max - min + 1)) + min; }
+    function isoBetween(startIso, endIso) {
+      const a = new Date(startIso).getTime();
+      const b = new Date(endIso).getTime();
+      const t = a + Math.floor(rnd() * (b - a));
+      return new Date(t).toISOString();
+    }
+    function approxSizeBytes() {
+      const base = Math.pow(2, 12 + Math.floor(Math.pow(rnd(), 0.6) * 16));
+      return Math.floor(base * (0.6 + rnd()));
+    }
+
+    function demoErrorDetail(kind) {
+      switch (kind) {
+        case "throttle": return "Request throttled (429) - too many requests. Please retry later.";
+        case "timeout": return "Operation timed out while downloading the item content.";
+        case "access": return "Access denied / forbidden - permission required for this location.";
+        case "notfound": return "Item not found (404) - the item may have been deleted or moved.";
+        case "downloadfail": return "Item download failed due to transient network failure.";
+        default: return "Unknown error.";
+      }
+    }
+
+    function csvEscape(v) {
+      const s = String(v ?? "");
+      if (/[",\r\n]/.test(s)) return `"${s.replaceAll('"','""')}"`;
+      return s;
+    }
+
+    const header = [
+      "Status","Error detail","Workload","Type","Item class",
+      "Content source application","Compound path","Item source","File class",
+      "Size","File extension","Original file extension","Extracted content type",
+      "Has attachment","Has unique attachment","Has text","Extracted text length",
+      "Family ID","Family size","Parent ID","Modern attachment parent ID",
+      "Is modern attachment","Is attachment from transcript",
+      "Created","Received","Email date sent","Date",
+      "Custodian","Data source","Location ID","Location sub type",
+      "Potentially privileged","Sensitivity label","Sensitive type",
+      "Is external","Is encrypted","Recipient count",
+      "Is representative","Is thread representative","Is group representative",
+      "ND set","Email set","Family duplicate set",
+      "Added by"
+    ];
+
+    const lines = [];
+    lines.push(header.map(csvEscape).join(","));
+
+    const rowCount = 240;
+
+    for (let i = 0; i < rowCount; i++) {
+      const custodian = pick(custodians);
+      const rawWorkload = pick(workloads);
+
+      const makeTeamsLike = (rawWorkload === "Exchange" && chance(0.45));
+
+      const type = pick(types);
+      const itemClass = makeTeamsLike ? "IPM.SkypeTeams.Message" : (type === "Email" ? "IPM.Note" : "(blank)");
+
+      const csa = makeTeamsLike ? "MicrosoftTeams" : (rawWorkload === "SharePoint" ? "SharePoint" : "");
+      const compoundPath = makeTeamsLike ? `${custodian}/TeamsMessagesData/threadv2/${isoBetween("2025-04-01T00:00:00Z","2025-07-01T00:00:00Z")}` : "";
+      const itemSource = makeTeamsLike ? `.../Exchange/.../TEAMS/...` : "";
+      const fileClass = makeTeamsLike ? "MicrosoftTeams" : "";
+
+      let dataSource = "(blank)";
+      let locationId = "(blank)";
+      let locationSubType = "(blank)";
+
+      if (rawWorkload === "Exchange") {
+        dataSource = `Mailbox:${custodian}`;
+        locationId = `EXO:${custodian}`;
+        locationSubType = "PrimaryMailBox";
+      }
+
+      if (rawWorkload === "SharePoint") {
+        const spSite = `https://sharepoint.company.com/sites/${chance(0.5) ? "Legal" : "Finance"}`;
+        const spLibrary = chance(0.75) ? "Shared%20Documents" : "Documents";
+        const spFolder = chance(0.45) ? `/Matter-${int(100, 999)}` : "";
+        dataSource = spSite;
+        locationId = `SPO:${spSite}/${spLibrary}${spFolder}`;
+        locationSubType = "Site";
+      }
+
+      if (rawWorkload === "OneDrive") {
+        dataSource = `https://company-my.sharepoint.com/personal/${custodian.replaceAll("@","_").replaceAll(".","_")}`;
+        locationId = `OD:${custodian}`;
+        locationSubType = "OneDriveSite";
+      }
+
+      let status = "Successful";
+      let errorDetail = "";
+
+      const failRoll = rnd();
+      if (failRoll < 0.07) {
+        status = "Retrieval error";
+        errorDetail = demoErrorDetail(pick(["throttle","timeout","access","notfound","downloadfail"]));
+      } else if (failRoll < 0.10) {
+        status = "Failed";
+        errorDetail = demoErrorDetail(pick(["timeout","access","downloadfail"]));
+      }
+
+      let size = "";
+      if (chance(0.08)) size = "";
+      else if (chance(0.02)) size = "N/A";
+      else size = String(approxSizeBytes());
+
+      let ext = pick(extPool);
+      if (type === "Email") ext = ".msg";
+      if (makeTeamsLike && (type === "Conversation" || type === "Message")) ext = ".html";
+
+      const extractedContentType =
+        ext === ".pdf" ? "application/pdf" :
+        ext === ".docx" ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" :
+        ext === ".xlsx" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" :
+        ext === ".png" ? "image/png" :
+        ext === ".jpg" ? "image/jpeg" :
+        ext === ".zip" ? "application/zip" :
+        ext === ".html" ? "text/html; charset=UTF-8" :
+        "application/octet-stream";
+
+      const isEncrypted = chance(0.06) ? "TRUE" : "FALSE";
+      const hasText = ([".png",".jpg",".zip"].includes(ext) || isEncrypted === "TRUE") ? (chance(0.75) ? "FALSE" : "TRUE") : "TRUE";
+
+      let extractedTextLen = "";
+      if (hasText === "TRUE") extractedTextLen = String(int(50, 15000));
+      else extractedTextLen = chance(0.4) ? "0" : "";
+
+      const created = (status.toLowerCase() === "successful") ? isoBetween("2025-04-01T00:00:00.000Z", "2025-07-31T23:59:59.000Z") : "1970-01-01T00:00:00Z";
+      const received = (type === "Email" && status.toLowerCase() === "successful") ? isoBetween("2025-04-01T00:00:00.000Z", "2025-07-31T23:59:59.000Z") : "";
+      const sent = (type === "Email" && status.toLowerCase() === "successful") ? isoBetween("2025-04-01T00:00:00.000Z", "2025-07-31T23:59:59.000Z") : "";
+      const date = (makeTeamsLike && status.toLowerCase() === "successful") ? created : "";
+
+      const potentiallyPrivileged = chance(0.05) ? "TRUE" : "FALSE";
+      const sensitivityLabel = pick(sensLabels);
+      const sensitiveType = pick(sensitiveTypes);
+
+      const isExternal =
+        (rawWorkload === "SharePoint" || rawWorkload === "OneDrive")
+          ? (chance(0.16) ? "TRUE" : "FALSE")
+          : (chance(0.08) ? "TRUE" : "FALSE");
+
+      const row = {
+        "Status": status,
+        "Error detail": errorDetail,
+        "Workload": rawWorkload,
+        "Type": type,
+        "Item class": itemClass,
+        "Content source application": csa,
+        "Compound path": compoundPath,
+        "Item source": itemSource,
+        "File class": fileClass,
+
+        "Size": size,
+        "File extension": ext,
+        "Original file extension": ext,
+        "Extracted content type": extractedContentType,
+
+        "Has attachment": (type === "Email" && chance(0.35)) ? "TRUE" : "FALSE",
+        "Has unique attachment": (type === "Email" && chance(0.25)) ? "TRUE" : "FALSE",
+        "Has text": hasText,
+        "Extracted text length": extractedTextLen,
+
+        "Family ID": chance(0.25) ? `FAM-${int(1000,1100)}` : "",
+        "Family size": chance(0.25) ? String(int(1, 8)) : "",
+        "Parent ID": chance(0.10) ? `PARENT-${int(100000,999999)}` : "",
+        "Modern attachment parent ID": chance(0.07) ? `MP-${int(100000,999999)}` : "",
+        "Is modern attachment": chance(0.06) ? "TRUE" : "FALSE",
+        "Is attachment from transcript": chance(0.03) ? "TRUE" : "FALSE",
+
+        "Created": created,
+        "Received": received,
+        "Email date sent": sent,
+        "Date": date,
+
+        "Custodian": custodian,
+        "Data source": dataSource,
+        "Location ID": locationId,
+        "Location sub type": locationSubType,
+
+        "Potentially privileged": potentiallyPrivileged,
+        "Sensitivity label": sensitivityLabel,
+        "Sensitive type": sensitiveType,
+
+        "Is external": isExternal,
+        "Is encrypted": isEncrypted,
+        "Recipient count": type === "Email" ? String(int(1, 18)) : "",
+
+        "Is representative": chance(0.06) ? "TRUE" : "FALSE",
+        "Is thread representative": chance(0.05) ? "TRUE" : "FALSE",
+        "Is group representative": chance(0.04) ? "TRUE" : "FALSE",
+
+        "ND set": chance(0.55) ? `ND-${int(1, 25)}` : "(blank)",
+        "Email set": chance(0.40) ? `EMAILSET-${int(1, 18)}` : "(blank)",
+        "Family duplicate set": chance(0.22) ? `FAMDUPE-${int(1, 14)}` : "(blank)",
+
+        "Added by": chance(0.85) ? (chance(0.6) ? "IndexedQuery" : "UnindexedQuery") : ""
+      };
+
+      lines.push(header.map(h => csvEscape(row[h] ?? "")).join(","));
+    }
+
+    return lines.join("\r\n");
+  }
+
+  async function analyzeFile(file) {
+    resetUi();
+
+    setProgress(5, "Reading file…");
+
+    const buf = await file.arrayBuffer();
+    setProgress(10, "Computing SHA-256…");
+    const sha = await sha256HexFromArrayBuffer(buf);
+
+    setProgress(15, "Decoding text…");
+    const text = new TextDecoder("utf-8", { fatal: false }).decode(buf);
+
+    const agg = createEmptyAgg();
+    agg.sourceFileName = file.name || "Items_…csv";
+    agg.fileSizeBytes = file.size || 0;
+    agg.csvSha256Hex = sha;
+    agg.generatedAt = new Date();
+
+    if (el.fileMeta) {
+      el.fileMeta.innerHTML = `
+        <div><strong>Chosen file:</strong> <span class="mono">${esc(agg.sourceFileName)}</span> (${esc(formatBytes(agg.fileSizeBytes))})</div>
+        <div><strong>Tool version:</strong> <span class="mono">${esc(TOOL_VERSION)}</span></div>
+        <div><strong>Author:</strong> Mitch King</div>
+        <div><strong>SHA-256 (file fingerprint):</strong> <span class="mono">${esc(sha)}</span></div>
+        <div><strong>Displayed time zone:</strong> <span class="mono">${esc(REPORT_TIMEZONE_LABEL)}</span></div>
+      `;
+    }
+
+    analyzeCsvText(text, agg);
+    renderAll(agg);
+    setProgress(100, "Done. Download the HTML report.");
+    return agg;
+  }
+
+  async function loadExampleDataset() {
+    resetUi();
+
+    setProgress(5, "Building example dataset…");
+    const csvText = buildExampleCsv();
+
+    setProgress(10, "Computing SHA-256…");
+    const sha = await sha256HexFromTextUtf8(csvText);
+
+    const agg = createEmptyAgg();
+    agg.sourceFileName = "Items_1-2025-10-21_09-14-31.csv (example)";
+    agg.fileSizeBytes = new TextEncoder().encode(csvText).length;
+    agg.csvSha256Hex = sha;
+    agg.generatedAt = new Date();
+
+    if (el.fileMeta) {
+      el.fileMeta.innerHTML = `
+        <div><strong>Chosen file:</strong> <span class="mono">${esc(agg.sourceFileName)}</span> (${esc(formatBytes(agg.fileSizeBytes))})</div>
+        <div><span class="pill">Synthetic demo data</span> <span class="muted">Generated locally in your browser.</span></div>
+        <div><strong>Tool version:</strong> <span class="mono">${esc(TOOL_VERSION)}</span></div>
+        <div><strong>Author:</strong> Mitch King</div>
+        <div><strong>SHA-256 (fingerprint):</strong> <span class="mono">${esc(sha)}</span></div>
+        <div><strong>Displayed time zone:</strong> <span class="mono">${esc(REPORT_TIMEZONE_LABEL)}</span></div>
+      `;
+    }
+
+    analyzeCsvText(csvText, agg);
+    renderAll(agg);
+    setProgress(100, "Done. Download the HTML report.");
+    return agg;
+  }
+
+  let lastAgg = null;
+
+  setVersionText();
+  resetUi();
+  initHelpTooltipSystem();
+
+  if (!el.openBtn || !el.fileInput || !el.dropzone) return;
+
+  el.openBtn.addEventListener("click", () => el.fileInput.click());
+
+  if (el.exampleBtn) {
+    el.exampleBtn.addEventListener("click", async () => {
+      try {
+        lastAgg = await loadExampleDataset();
+      } catch (e) {
+        console.error(e);
+        setProgress(el.progress?.value || 0, "Error building/loading example data. Check the console (F12).");
+      }
+    });
+  }
+
+  el.fileInput.addEventListener("change", async () => {
+    const f = el.fileInput.files && el.fileInput.files[0];
+    if (!f) return;
+    try {
+      lastAgg = await analyzeFile(f);
+    } catch (e) {
+      console.error(e);
+      setProgress(el.progress?.value || 0, "Error parsing CSV. Check the console (F12) for details.");
+    }
+  });
+
+  el.resetBtn.addEventListener("click", () => {
+    lastAgg = null;
+    resetUi();
+  });
+
+  el.downloadReportBtn.addEventListener("click", () => {
+    if (!lastAgg) return;
+    const html = buildStaticReportHtml(lastAgg);
+    downloadTextFile("purview-items-report-summary.html", html, "text/html");
+  });
+
+  if (el.maskValues) {
+    el.maskValues.addEventListener("change", () => {
+      if (!lastAgg) return;
+      renderAll(lastAgg);
+    });
+  }
+
+  if (el.downloadToolBtn) {
+    el.downloadToolBtn.addEventListener("click", () => {
+      const html = "<!doctype html>\n" + document.documentElement.outerHTML;
+      downloadTextFile("purview-items-report-tool.html", html, "text/html");
+    });
+  }
+
+  el.dropzone.addEventListener("dragover", (e) => { e.preventDefault(); el.dropzone.classList.add("dragover"); });
+  el.dropzone.addEventListener("dragleave", () => el.dropzone.classList.remove("dragover"));
+  el.dropzone.addEventListener("drop", async (e) => {
+    e.preventDefault();
+    el.dropzone.classList.remove("dragover");
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!f) return;
+    try {
+      lastAgg = await analyzeFile(f);
+    } catch (err) {
+      console.error(err);
+      setProgress(el.progress?.value || 0, "Error parsing CSV. Check the console (F12) for details.");
+    }
+  });
+})();
+</script>
+</body>
+</html>
